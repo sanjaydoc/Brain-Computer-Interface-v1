@@ -242,11 +242,11 @@ brain-computer-interface-v1/
 │   │   ├── streaming/            # WebSocket server, state serialization
 │   │   └── api/                  # FastAPI app, endpoints
 │   └── tests/
-├── frontend/
+├── frontend/                    # unified GUI control plane (§5.2)
 │   ├── src/
-│   │   ├── viz/                  # Three.js connectome scene, instanced neurons/edges
-│   │   ├── panels/              # inspector, spike raster, time controls
-│   │   ├── net/                 # WebSocket client, decode/state store
+│   │   ├── viz/                  # Three.js LOD connectome scene, instanced neurons
+│   │   ├── panels/              # biomolecules · scanner · template · virtual-env · system
+│   │   ├── net/                 # REST + WebSocket client, binary decode, state store
 │   │   └── app/
 │   └── ...
 └── README.md
@@ -278,6 +278,26 @@ sim scale is decoupled from viz scale, and nothing is worm-specific.
 One authoritative loop mutates the twin; everyone else reads immutable snapshots (§6.3).
 
 **Open refinements (settle at build):** focal-blur on/off in v1; snapshot every-tick vs every-N.
+
+---
+
+## 5.2 Unified GUI — control plane over all four parts
+
+One web app = the cockpit to run & manage everything. Thin layer over the backend:
+edits `config.yaml` (which selects implementations) + calls REST/WebSocket. No business
+logic in the frontend → worm and human use the same GUI.
+
+| Panel | Manages | Controls |
+|-------|---------|----------|
+| **Biomolecules** (P1) | De-Novo-LLM channels | generate/browse candidates, assign channel → neuron group |
+| **Scanner** (P2) | read + write | dust density/noise, focus/freq/expression, live I/O monitor |
+| **Brain Template** (P3) | connectome + twin | pick source, scale/LOD, load, snapshots (save/load/rewind) |
+| **Virtual Env** (P4) | the run | play/pause/step/speed, stimulus protocol, environment select |
+| **Live 3D view** | the twin | zoom/LOD, click neuron → inspect, activity heat-map |
+| **System** | config + scale | load profile (`worm.yaml`…), impl registry, resource/scale monitor |
+
+Scalable by construction: GUI issues **view-scoped** calls (region @ zoom) and drives the
+partitioned backend — never materializes the whole twin client-side.
 
 ---
 
