@@ -77,11 +77,15 @@ const PANELS = {
     environment · renderer. Run a live backend with <code>bci serve</code> (REST + WebSocket).</p>`,
 };
 
+import { renderBiomolecules } from './molecular.js';
+
 const panel = document.getElementById('panel');
 const tabs = [...document.querySelectorAll('.tab')];
 tabs.forEach((t) => t.addEventListener('click', () => {
   tabs.forEach((x) => x.classList.toggle('active', x === t));
   const key = t.dataset.tab;
-  if (key === 'brain') { panel.hidden = true; panel.innerHTML = ''; }
-  else { panel.innerHTML = `<div class="panel-inner">${PANELS[key] || ''}</div>`; panel.hidden = false; }
+  if (key === 'brain') { panel.hidden = true; panel.innerHTML = ''; return; }
+  panel.hidden = false;
+  if (key === 'biomolecules') { renderBiomolecules(panel); }
+  else { panel.innerHTML = `<div class="panel-inner">${PANELS[key] || ''}</div>`; }
 }));
