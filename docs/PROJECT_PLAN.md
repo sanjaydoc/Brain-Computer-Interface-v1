@@ -67,6 +67,48 @@ Part 3 says which neurons express it → Part 4 simulates + visualizes the whole
 and Part 2-READ (neural dust) closes it. v1 realizes this loop *in simulation* first;
 real arrays/motes swap in behind the same contracts later.
 
+## 2.2 First principle: everything configurable (config picks *implementations*)
+
+The project's whole purpose is to climb 302 → 200k → 71M → 86B neurons, so
+**configurability is the top architectural constraint**, not a nicety. Rule:
+
+> **Config selects which *implementation* loads for each layer, not just parameter
+> values.** Every layer is an interface + a registry; one `config.yaml` names the
+> implementation per layer and its params. Worm and mouse become *the same program
+> with two config files.*
+
+### Swappable seams (each an interface with a registry)
+| Layer | Interface | Implementations (config-selected) |
+|-------|-----------|-----------------------------------|
+| Connectome (P3) | `ConnectomeSource` | `celegans` · `synthetic` · `microns` |
+| Neuron model (P4) | `NeuronModel` | `lif` · `hodgkin_huxley` · `activation` |
+| Integrator (P4) | `Stepper` | `cpu_numpy` · `gpu`* · `sparse`* |
+| Write path (P2) | `NeuralOutput` | `logging` · `simulated_sono` · `hardware_sono`* |
+| Read path (P2) | `NeuralInput` | `synthetic` · `simulated_dust` · `hardware_dust`* |
+| Addressing | `AddressingModel` | `idealized` · `realistic` (focal blur × expression, mote pooling) |
+| Molecular (P1) | `ChannelLibrary` | `static` · `denovo_llm` (De-Novo-LLM repo) |
+| Representation | `TemplateScale` | `per_neuron` · `region_voxel`* · `multiscale_lod`* |
+| Rendering | `Renderer` | `full` · `lod`* · `density_field`* |
+| Streaming | `Publisher` | `every_tick` · `every_n_ticks` · `on_change` |
+
+`*` = seam designed in v1, second implementation added when we hit MICrONS/scale.
+
+### Disciplines that keep configurability from rotting
+1. **Registry pattern** — `register("lif", LIFModel)`; adding a variant = one class +
+   one registration, never editing the core. (Mirrors De-Novo-LLM's modality registry.)
+2. **Typed, validated config + named profiles** — Pydantic-checked; ship complete
+   presets `profiles/worm.yaml`, `profiles/microns.yaml`, `profiles/mouse_mesoscale.yaml`.
+   Scaling up = load the next profile.
+3. **Capability guards** — invalid combos (e.g. `per_neuron` + 71M on CPU) fail at load
+   with a message pointing to the right implementation (`multiscale_lod` + `gpu`).
+
+### Cost control (avoid premature abstraction)
+> Design **every seam** now (interface + registry + config), but ship **one real
+> implementation per seam** in v1 (worm-scale), plus a stub/second where it proves the
+> seam (e.g. `synthetic` beside `celegans`). Second real impls (`microns`, `gpu`,
+> `lod`, `hodgkin_huxley`) drop into seams that already exist — reuse without building
+> ten things we don't need yet.
+
 ## 3. Target architecture
 
 ```
