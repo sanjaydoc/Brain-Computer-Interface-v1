@@ -11,8 +11,8 @@ node_modules/
 dist/
 .vite/
 
-# Data (raw connectome downloads)
-data/connectomes/raw/
+# Data — raw connectome downloads (build intermediates); vendored CSVs ARE committed
+data/connectomes/**/raw/
 
 # OS / editor
 .DS_Store

@@ -10,7 +10,7 @@ environment with live 3D visualization.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0d0d0f.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-2f6fed.svg)](https://www.python.org/)
-[![Build: P0 spine](https://img.shields.io/badge/build-P0%20spine%20✓-0e9f6e.svg)](docs/PROJECT_PLAN.md)
+[![Build: P1 worm](https://img.shields.io/badge/build-P1%20worm%20✓-0e9f6e.svg)](docs/PROJECT_PLAN.md)
 [![Scale](https://img.shields.io/badge/proven-10M%20neurons-635bff.svg)](#-scalability-proven-not-promised)
 [![North Star](https://img.shields.io/badge/target-86B%20neurons-d98218.svg)](#-the-scale-ladder)
 
@@ -216,15 +216,17 @@ One code path, four rungs. Scaling up is **loading the next profile**, not a rew
 ## 🎛️ The GUI control plane
 
 A single web cockpit — **templated on [LabSuite](https://github.com/sanjaydoc/LabSuite)**
-(zero-build, live + demo mode) — to run and manage all four parts. Landing page live at
-the [website](https://sanjaydoc.github.io/Brain-Computer-Interface-v1/):
+(zero-build, live + demo mode) — to run and manage all four parts. **The real 302-neuron
+worm, rendered live in the browser** (orbit, auto-rotate, click-to-inspect; neurons colored
+by out-degree, synapses as lines):
 
 <div align="center">
 
-![Website](docs/media/landing.png)
+![Control plane — the worm in 3D](docs/media/worm_viewer.png)
 
 </div>
 
+Try it live: **[control plane →](https://sanjaydoc.github.io/Brain-Computer-Interface-v1/app/)**
 Panels: **Biomolecules** · **Scanner** · **Brain Template** · **Virtual Env** · **Live 3D** · **System**.
 
 ---
@@ -279,7 +281,7 @@ Brain-Computer-Interface-v1/
 ## 🧭 Roadmap
 
 - [x] **P0 — Spine** · config + registry, connectome SoA/sparse model, synthetic source, **10M-neuron proof**
-- [ ] **P1 — Worm** · real *C. elegans* connectome (OpenWorm) loads + renders in 3D
+- [x] **P1 — Worm** · real *C. elegans* connectome (Cook 2019 + OpenWorm) loads + **renders in 3D** in the browser
 - [ ] **P2 — Simulation** · neurons actually fire (LIF), headless engine
 - [ ] **P3 — Live** · real-time streaming → 3D visualization *(the headline)*
 - [ ] **P4 — Loop** · sonogenetic write + neural-dust read (stimulus in, activity out)

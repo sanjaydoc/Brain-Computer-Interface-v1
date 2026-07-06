@@ -1,0 +1,62 @@
+/* Control-plane GUI — layered on the shared BCI/LabSuite theme (../assets/theme.css). */
+
+body { display: flex; flex-direction: column; min-height: 100vh; }
+
+.tabs {
+  display: flex; align-items: center; gap: .5rem; padding: 12px 24px;
+  border-bottom: 1px solid var(--hair); flex-wrap: wrap;
+}
+.tab {
+  font-family: var(--sans); font-size: .86rem; font-weight: 600; color: var(--ink-2);
+  background: var(--paper); border: 1px solid var(--hair); border-radius: var(--pill);
+  padding: .34rem .9rem; cursor: pointer;
+}
+.tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.tab:disabled { opacity: .45; cursor: not-allowed; }
+.tab-note { font-size: .8rem; margin-left: .4rem; }
+
+.stage { flex: 1; position: relative; }
+.viewer { position: absolute; inset: 0; overflow: hidden; background:
+  radial-gradient(120% 120% at 50% 20%, #ffffff 0%, #f3f3f5 70%, #ececef 100%); }
+.viewer canvas { display: block; }
+
+.loading {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--serif); font-size: 1.4rem; color: var(--muted); z-index: 5;
+}
+
+.overlay {
+  position: absolute; background: rgba(255,255,255,.86); backdrop-filter: blur(8px);
+  border: 1px solid var(--hair); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 16px 18px; z-index: 4; max-width: 280px;
+}
+.overlay h3 { font-family: var(--serif); font-size: 1.5rem; margin: .1rem 0 .6rem; }
+.stats { top: 18px; left: 18px; }
+.controls { top: 18px; right: 18px; display: flex; flex-direction: column; gap: .55rem; }
+.inspector { bottom: 18px; left: 18px; }
+
+.statrow { display: flex; justify-content: space-between; gap: 1.4rem; font-size: .86rem;
+  padding: .28rem 0; border-bottom: 1px solid var(--hair); }
+.statrow:last-child { border-bottom: 0; }
+.statrow span { color: var(--muted); }
+.statrow b { font-weight: 700; }
+.small { font-size: .76rem; margin-top: .5rem; }
+
+.ctl { display: flex; align-items: center; gap: .5rem; font-size: .84rem; color: var(--ink-2); }
+.ctl input[type=range] { flex: 1; accent-color: var(--ink); }
+.ctl input[type=checkbox] { accent-color: var(--ink); width: 15px; height: 15px; }
+
+.legend {
+  position: absolute; bottom: 18px; right: 18px; z-index: 4;
+  display: flex; align-items: center; gap: .5rem; font-size: .72rem; color: var(--muted);
+  background: rgba(255,255,255,.86); border: 1px solid var(--hair); border-radius: var(--pill);
+  padding: .3rem .7rem;
+}
+.legend .ramp { width: 90px; height: 8px; border-radius: 4px;
+  background: linear-gradient(90deg, #2f6fed, #0e9f6e, #d98218); display: inline-block; }
+
+@media (max-width: 640px) {
+  .overlay { max-width: 44vw; padding: 11px 12px; }
+  .overlay h3 { font-size: 1.15rem; }
+  .controls { gap: .4rem; }
+}
