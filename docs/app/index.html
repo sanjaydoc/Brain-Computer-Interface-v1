@@ -54,8 +54,9 @@
       <div class="overlay controls">
         <button class="btn" id="run">▶ Run brain</button>
         <div class="eyebrow" style="margin-top:.3rem">write a stimulus</div>
-        <button class="btn act" id="stim-ant">Anterior touch →</button>
-        <button class="btn act" id="stim-post">← Posterior touch</button>
+        <button class="btn act" id="stim-post">Posterior touch (PLM)</button>
+        <button class="btn act" id="stim-fwd">Drive forward cmd (AVB)</button>
+        <button class="btn act" id="stim-rev">Drive reverse cmd (AVA)</button>
         <div class="muted small">…or click any neuron to stimulate it</div>
         <hr class="divider" />
         <label class="ctl"><input type="checkbox" id="spin" checked /> auto-rotate</label>
@@ -80,8 +81,9 @@
       </div>
       <canvas id="worm" class="worm-canvas"></canvas>
       <div class="venv-note muted">
-        The worm's body is driven live by its command neurons.
-        <b>Anterior touch → reversal · posterior touch → forward crawl.</b>
+        Locomotion is <b>decoded live from the command neurons</b> — it emerges from
+        simulating the connectome. Driving reverse (AVA) → the worm backs up; forward
+        (AVB) or posterior touch → it crawls ahead.
       </div>
     </aside>
   </main>
