@@ -109,6 +109,48 @@ The project's whole purpose is to climb 302 → 200k → 71M → 86B neurons, so
 > `lod`, `hodgkin_huxley`) drop into seams that already exist — reuse without building
 > ten things we don't need yet.
 
+## 2.3 The Scalability Contract (binding on EVERY module)
+
+Scalability is a contract every module signs, not a property some happen to have.
+No module merges unless it obeys all five rules and declares its scaling path.
+
+| # | Rule | Forbids |
+|---|------|---------|
+| 1 | **No per-element objects** — state is columnar arrays (SoA), id-indexed | `class Neuron` in a list (dies ~1M) |
+| 2 | **Sparse, never dense** — never allocate N×N; connectivity is CSR/COO | 86B×86B matrix |
+| 3 | **Linear or better** — ≤ O(N) in neurons, O(E) in synapses; **zero O(N²)** | all-pairs loops |
+| 4 | **Bounded memory / out-of-core** — never *require* whole thing in RAM; chunk/mmap/stream | materializing 500M synapses per frame |
+| 5 | **Backend-agnostic + query-scoped** — compute behind an array iface (numpy→GPU→distributed); viz/addressing/streaming use region/viewport queries, never full scans | CPU-locked math; redraw-all-per-tick |
+
+### Per-module scaling path (v1 impl → scales to)
+| Module | Strategy | Complexity |
+|--------|----------|-----------|
+| Connectome loader | lazy/streaming, Parquet, chunked | O(E) load, out-of-core |
+| Twin state | SoA arrays + spatial index (octree/grid) | O(N) mem, mmap-able |
+| Neuron model | vectorized elementwise | O(N)/step |
+| Stepper | sparse matvec (`cpu_numpy`→`gpu`→distributed) | O(E)/step |
+| Connectivity store | CSR sparse matrix | O(E) mem |
+| Acoustic addressing | spatial-index range query | O(neurons near focus) |
+| Read/Write (dust/sono) | affected-subset only | O(affected) |
+| Environment | sparse stimulus events | O(events) |
+| Streaming/Publisher | deltas, view-scoped, binary | O(visible+changed) |
+| Renderer | LOD + instancing + aggregation | O(visible) |
+| Snapshot/persistence | chunked columnar (zarr/Parquet) | O(N) streamed to disk |
+| Config/registry | key lookup | O(1) |
+
+**No module is worse than O(E).** That is the invariant that makes 302 → 86B survivable.
+
+### Enforcement (so it's real, not a promise)
+1. **Complexity budget in every module docstring** — declared Big-O ceiling; violating PRs fail review.
+2. **Scale-tier benchmarks** — a module is "scalable" only once benchmarked at worm (302)
+   **and** synthetic **1M and 10M** neurons (`SyntheticSource` exists to prove this without real data).
+3. **Capability guards** (§2.2) reject invalid scale/impl combos at config load.
+4. **"Scales? + strategy + ceiling"** is part of every module's Definition of Done.
+
+Honest scope: not "everything is O(1)" — touching every neuron is irreducibly O(N).
+The contract *forbids the four killers* (objects, dense matrices, O(N²), full
+materialization) and *requires each module to declare + benchmark its scaling path*.
+
 ## 3. Target architecture
 
 ```
