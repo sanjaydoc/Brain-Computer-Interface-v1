@@ -305,9 +305,18 @@ Brain-Computer-Interface-v1/
 - [x] **P2 — Simulation** · Python LIF engine + sparse stepper; **locomotion emerges from the connectome** (17 tests)
 - [x] **P3 — Live** · FastAPI + WebSocket streaming (`bci serve`); browser demo-mode mirror
 - [x] **P4 — Loop** · sonogenetic write + neural-dust read contracts + stimulus environment (the four-part loop)
-- [x] **P5 — Cockpit** · full GUI panels (Brain template · Biomolecules · Scanner · Virtual env · System) + CI
+- [x] **P5 — Cockpit** · all GUI panels interactive: **Biomolecules** (generate → test), **Scanner** (ultrasound write + dust read, live), **System** (live monitor + brain-tuning sliders) + CI
+- [x] **Part 1 wired** · **De-Novo-LLM** integrated — generate biomolecules → cast as sonogenetic channels → **test on the connectome** (local GPU / NVIDIA NIM / bundled fallback)
 
-**v1 complete.** Next horizon: the scale ladder — MICrONS mouse column (LOD rendering), GPU stepper, then mesoscale.
+**v1 complete — the full four-part loop is real.** Next horizon: the scale ladder — MICrONS mouse column (LOD rendering), GPU stepper, then mesoscale.
+
+### Running the molecular pipeline locally
+The hosted demo uses bundled samples (a browser can't run PyTorch). On your own machine:
+```bash
+pip install -e /path/to/De-Novo-LLM      # your trained checkpoints → real generation
+export NVIDIA_API_KEY=nvapi-...           # optional: NVIDIA NIM / BioNeMo cloud
+bci serve                                 # the GUI Biomolecules panel now shows "live"
+```
 - [ ] **P5 — Cockpit** · full GUI control-plane panels + polish
 
 ---
