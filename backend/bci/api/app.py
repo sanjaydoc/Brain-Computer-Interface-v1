@@ -11,9 +11,26 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 
 from ..connectome import sources
+from ..molecular import MolecularService, SonogeneticChannel, test_on_connectome
 from ..runtime import Runtime
+
+
+class GenerateReq(BaseModel):
+    modality: str = "smiles"
+    n: int = 8
+    target: str = "rev"
+    backend: str = "auto"
+
+
+class TestReq(BaseModel):
+    sequence: str
+    modality: str = "smiles"
+    sensitivity: float | None = None
+    target: str = "rev"
+    connectome: str = "celegans"
 
 
 def _connectome_payload(impl: str) -> dict:
@@ -43,6 +60,27 @@ def create_app() -> FastAPI:
     @app.get("/api/connectome/{impl}")
     def connectome(impl: str) -> dict:
         return _connectome_payload(impl)
+
+    # -- Part 1: molecular generation + connectome assay -----------------------
+    molecular = MolecularService()
+
+    @app.get("/api/molecular/backends")
+    def molecular_backends() -> dict:
+        return molecular.backends()
+
+    @app.post("/api/molecular/generate")
+    def molecular_generate(req: GenerateReq) -> dict:
+        return molecular.generate_channels(req.modality, req.n, target=req.target, backend=req.backend)
+
+    @app.post("/api/molecular/test")
+    def molecular_test(req: TestReq) -> dict:
+        c = sources.create(req.connectome).load()
+        if req.sensitivity is not None:
+            ch = SonogeneticChannel(id="test", sequence=req.sequence, modality=req.modality,
+                                    sensitivity=req.sensitivity, target=req.target)
+        else:
+            ch = SonogeneticChannel.from_sequence(req.sequence, req.modality, 0, req.target)
+        return test_on_connectome(c, ch)
 
     @app.websocket("/ws")
     async def ws(websocket: WebSocket) -> None:

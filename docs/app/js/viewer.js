@@ -96,7 +96,8 @@ function build(d) {
   scene.add(edgeLines);
 
   sim = new BrainSim(d);
-  window.__sim = sim;   // exposed for tuning/inspection
+  window.__sim = sim;          // exposed for tuning/inspection
+  window.__connectome = d;     // exposed for the molecular assay
   worm = new WormViz($('worm'));
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
