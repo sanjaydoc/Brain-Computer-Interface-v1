@@ -216,17 +216,19 @@ One code path, four rungs. Scaling up is **loading the next profile**, not a rew
 ## 🎛️ The GUI control plane
 
 A single web cockpit — **templated on [LabSuite](https://github.com/sanjaydoc/LabSuite)**
-(zero-build, live + demo mode) — to run and manage all four parts. **The real 302-neuron
-worm, rendered live in the browser** (orbit, auto-rotate, click-to-inspect; neurons colored
-by out-degree, synapses as lines):
+(zero-build, live + demo mode) — to run and manage all four parts. **Run the brain, write
+a stimulus, and watch the worm react:** a stimulus ignites a cascade through the real
+connectome (neurons light up), and the command neurons crawl a virtual worm — **anterior
+touch → reversal, posterior touch → forward.**
 
 <div align="center">
 
-![Control plane — the worm in 3D](docs/media/worm_viewer.png)
+![Control plane — run the brain, stimulate it, watch the worm](docs/media/control_plane.png)
 
 </div>
 
 Try it live: **[control plane →](https://sanjaydoc.github.io/Brain-Computer-Interface-v1/app/)**
+— press **▶ Run brain**, click **Anterior/Posterior touch**, or click any neuron to stimulate it.
 Panels: **Biomolecules** · **Scanner** · **Brain Template** · **Virtual Env** · **Live 3D** · **System**.
 
 ---
@@ -282,9 +284,9 @@ Brain-Computer-Interface-v1/
 
 - [x] **P0 — Spine** · config + registry, connectome SoA/sparse model, synthetic source, **10M-neuron proof**
 - [x] **P1 — Worm** · real *C. elegans* connectome (Cook 2019 + OpenWorm) loads + **renders in 3D** in the browser
-- [ ] **P2 — Simulation** · neurons actually fire (LIF), headless engine
-- [ ] **P3 — Live** · real-time streaming → 3D visualization *(the headline)*
-- [ ] **P4 — Loop** · sonogenetic write + neural-dust read (stimulus in, activity out)
+- [x] **P2–P4 preview (demo mode)** · **run the brain** (LIF), **write stimuli**, watch the **worm crawl** — live in the browser, no backend
+- [ ] **P2 — Python engine** · headless LIF engine + tests (parity with the browser demo)
+- [ ] **P3 — Live streaming** · backend → WebSocket → the same viewer at scale
 - [ ] **P5 — Cockpit** · full GUI control-plane panels + polish
 
 ---

@@ -32,7 +32,9 @@ def export(impl: str, name: str) -> None:
         "types": c.types.tolist(),
         "pos": [[round(float(v), 3) for v in row] for row in c.pos],
         "outdeg": outdeg,
-        "edges": [[int(i), int(j)] for i, j in zip(coo.row.tolist(), coo.col.tolist())],
+        # edges as [pre, post, weight] — weight drives the browser LIF simulation
+        "edges": [[int(i), int(j), float(w)]
+                  for i, j, w in zip(coo.row.tolist(), coo.col.tolist(), coo.data.tolist())],
     }
     path = OUT / f"{name}.json"
     path.write_text(json.dumps(data, separators=(",", ":")))
