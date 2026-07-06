@@ -42,8 +42,12 @@ const homeTarget = new THREE.Vector3();
 const HOME = [10, 55, 215];
 
 function resize() {
-  const w = container.clientWidth, h = container.clientHeight;
-  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+  const el = renderer.domElement;
+  const w = el.clientWidth || container.clientWidth;
+  const h = el.clientHeight || container.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);   // match drawing buffer to the CSS box (don't restyle)
+  camera.aspect = w / h; camera.updateProjectionMatrix();
   if (worm) worm.resize();
 }
 window.addEventListener('resize', resize);
@@ -96,7 +100,7 @@ function build(d) {
   worm = new WormViz($('worm'));
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
-  resize(); animate();
+  resize(); requestAnimationFrame(resize); animate();
 }
 
 const col = new THREE.Color();
@@ -116,13 +120,16 @@ function updateNeuronColors() {
 }
 
 function driveWorm() {
-  const cmd = sim.locomotion();  // −1 reverse .. +1 forward (reflex output)
+  const cmd = sim.locomotion();  // decoded live: forward − reverse command activity
   let mean = 0; for (let i = 0; i < sim.n; i++) mean += sim.act[i]; mean /= sim.n;
-  const dir = cmd < -0.05 ? -1 : 1;
-  worm.frame({ drive: 0.3 + 1.6 * Math.abs(cmd) + 2.2 * mean, dir, activity: mean, turn: dir < 0 ? 0.7 : 0 });
+  const active = mean > 0.015;
+  const dir = cmd < -0.02 ? -1 : 1;
+  const drive = active ? (0.4 + 2.0 * Math.abs(cmd) + 1.4 * mean) : 0.18;
+  worm.frame({ drive, dir, activity: mean, turn: dir < 0 ? 0.7 : 0 });
 
   const loco = $('loco');
-  if (dir < 0) { loco.textContent = 'reversing ←'; loco.className = 'loco rev'; }
+  if (!active) { loco.textContent = 'idle'; loco.className = 'loco'; }
+  else if (dir < 0) { loco.textContent = 'reversing ←'; loco.className = 'loco rev'; }
   else { loco.textContent = 'forward crawl →'; loco.className = 'loco fwd'; }
 
   let firing = 0; for (let i = 0; i < sim.n; i++) if (sim.act[i] > 0.08) firing++;
@@ -171,8 +178,10 @@ function toggleRun(force) {
   $('run').classList.toggle('act', running);
 }
 $('run').addEventListener('click', () => toggleRun());
-$('stim-ant').addEventListener('click', () => { if (sim) { sim.touch('anterior'); if (!running) toggleRun(true); } });
-$('stim-post').addEventListener('click', () => { if (sim) { sim.touch('posterior'); if (!running) toggleRun(true); } });
+const stimBtn = (id, role) => $(id).addEventListener('click', () => { if (sim) { sim.stimulateRole(role); if (!running) toggleRun(true); } });
+stimBtn('stim-post', 'touchPost');
+stimBtn('stim-fwd', 'fwd');
+stimBtn('stim-rev', 'rev');
 
 $('spin').addEventListener('change', e => { controls.autoRotate = e.target.checked; });
 $('edges').addEventListener('change', e => { if (edgeLines) edgeLines.visible = e.target.checked; });

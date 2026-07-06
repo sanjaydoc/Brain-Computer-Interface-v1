@@ -89,18 +89,27 @@
   </div>
 
   <script type="module">
+    // The hero worm is driven by a real LIF simulation of the connectome — the same
+    // BrainSim the control plane uses. It periodically drives the forward/reverse command
+    // circuits, and locomotion is decoded live from the command neurons.
     import { WormViz } from './app/js/worm2d.js';
+    import { BrainSim } from './app/js/sim.js';
     const worm = new WormViz(document.getElementById('hero-worm'), { bodyLen: 110, width: 17, base: 1.7 });
     addEventListener('resize', () => worm.resize());
-    let t = 0, cmd = 0.6, nextTurn = 220;
-    (function loop() {
-      t++;
-      if (t > nextTurn) { cmd = Math.random() < 0.32 ? -1 : 0.7; nextTurn = t + 160 + Math.random() * 260; }
-      cmd += (0.6 - cmd) * 0.008;               // relax toward forward crawl
-      const act = 0.28 + 0.18 * Math.sin(t * 0.05) + (cmd < 0 ? 0.32 : 0);
-      worm.frame({ drive: 0.5 + 1.2 * Math.abs(cmd) + act, dir: cmd < -0.05 ? -1 : 1, activity: act, turn: cmd < 0 ? 0.6 : 0 });
-      requestAnimationFrame(loop);
-    })();
+    fetch('./app/data/celegans.json').then((r) => r.json()).then((d) => {
+      const sim = new BrainSim(d);
+      let t = 0, nextStim = 60;
+      (function loop() {
+        t++;
+        for (let s = 0; s < 2; s++) sim.step();
+        if (t > nextStim) { sim.stimulateRole(Math.random() < 0.4 ? 'rev' : 'fwd'); nextStim = t + 80 + Math.random() * 150; }
+        const loco = sim.locomotion();
+        let mean = 0; for (let i = 0; i < sim.n; i++) mean += sim.act[i]; mean /= sim.n;
+        const active = mean > 0.015, dir = loco < -0.02 ? -1 : 1;
+        worm.frame({ drive: active ? 0.5 + 1.7 * Math.abs(loco) + 1.2 * mean : 0.22, dir, activity: mean, turn: dir < 0 ? 0.6 : 0 });
+        requestAnimationFrame(loop);
+      })();
+    });
   </script>
 
   <section class="section" id="parts">
