@@ -148,6 +148,15 @@ No module merges unless it obeys all five rules and declares its scaling path.
 
 **No module is worse than O(E).** That is the invariant that makes 302 → 86B survivable.
 
+### Partition-native (the choice that reaches 86B / 10¹⁴ synapses)
+Sparse+SoA is necessary but not sufficient — 86B neurons don't fit one machine. So the
+twin, storage, and compute are **partitioned into spatial region chunks**, never monolithic:
+- **Twin** = collection of region chunks → distributable across machines.
+- **Storage** = sharded columnar (zarr/Parquet), partitioned by region → out-of-core native.
+- **Compute** = `Stepper` runs per-partition; cross-partition synapses are explicit *halo*
+  edges → maps to multi-GPU / cluster.
+- **v1 worm = 1 partition** (trivial case of the same interface). Human = billions, same code.
+
 ### Enforcement (so it's real, not a promise)
 1. **Complexity budget in every module docstring** — declared Big-O ceiling; violating PRs fail review.
 2. **Scale-tier benchmarks** — a module is "scalable" only once benchmarked at worm (302)
