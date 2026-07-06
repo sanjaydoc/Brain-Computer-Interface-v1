@@ -8,7 +8,9 @@ decision is judged by whether it survives the climb worm → mouse → human. No
 worm-specific is allowed into the foundation.
 
 ### Locked decisions
-- ✅ **Frontend:** Web — React + TypeScript + Three.js (react-three-fiber).
+- ✅ **Frontend:** **LabSuite template** — polished zero-build vanilla HTML/CSS/JS
+  dashboard, FastAPI live mode + browser **demo mode**, tabbed nav + stat tiles + panels.
+  **Three.js** (vanilla) powers the live 3D view. Reuse LabSuite's theme + structure.
 - ✅ **Connectome:** **Pluggable loader** — C. elegans (302), synthetic, MICrONS mouse
   behind one `ConnectomeSource`; multi-scale LOD ladder toward human.
 - ✅ **Neuron model:** Start with **LIF**; **Hodgkin–Huxley** as a drop-in upgrade
@@ -242,13 +244,14 @@ brain-computer-interface-v1/
 │   │   ├── streaming/            # WebSocket server, state serialization
 │   │   └── api/                  # FastAPI app, endpoints
 │   └── tests/
-├── frontend/                    # unified GUI control plane (§5.2)
-│   ├── src/
-│   │   ├── viz/                  # Three.js LOD connectome scene, instanced neurons
-│   │   ├── panels/              # biomolecules · scanner · template · virtual-env · system
-│   │   ├── net/                 # REST + WebSocket client, binary decode, state store
-│   │   └── app/
-│   └── ...
+├── docs/app/                    # unified GUI (§5.2), LabSuite-style zero-build vanilla
+│   ├── index.html               # tabbed dashboard shell
+│   ├── css/                     # LabSuite theme (reused), panels, stat tiles
+│   └── js/
+│       ├── viz/                 # Three.js LOD connectome scene, instanced neurons
+│       ├── panels/              # biomolecules · scanner · template · virtual-env · system
+│       ├── net/                 # REST + WebSocket client, binary decode
+│       └── engine-demo/         # browser mirror of Python engine (demo mode)
 └── README.md
 ```
 
@@ -283,9 +286,12 @@ One authoritative loop mutates the twin; everyone else reads immutable snapshots
 
 ## 5.2 Unified GUI — control plane over all four parts
 
-One web app = the cockpit to run & manage everything. Thin layer over the backend:
-edits `config.yaml` (which selects implementations) + calls REST/WebSocket. No business
-logic in the frontend → worm and human use the same GUI.
+**Templated on LabSuite** — polished zero-build vanilla HTML/CSS/JS dashboard, reusing
+its theme, stat-tile look, tabbed nav, and **live (FastAPI) + demo (browser mirror)**
+dual-mode. One web app = the cockpit to run & manage everything. Thin layer over the
+backend: edits `config.yaml` (selects implementations) + calls REST/WebSocket. No
+business logic in the frontend → worm and human use the same GUI. Three.js (vanilla)
+renders the live 3D twin.
 
 | Panel | Manages | Controls |
 |-------|---------|----------|
