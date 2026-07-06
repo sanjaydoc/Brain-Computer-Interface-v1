@@ -52,6 +52,21 @@ software and are exactly where a live-visualization v1 lives.
 
 ---
 
+## 2.1 Concrete realization of each part (locked so far)
+
+| Part | Real component | Direction | Software role in this repo |
+|------|----------------|-----------|----------------------------|
+| 1 · Molecular | **De-Novo-LLM** (existing repo) generates sonogenetic channel proteins + neuro-interfacing biomolecules | — | External *molecular design service*; we consume its outputs |
+| 2 · Hardware (READ) | **Neural dust** — implanted piezo motes, ultrasonic backscatter | brain → sim | `NeuralInput` adapter; v1 uses a **simulated dust reader** |
+| 2 · Hardware (WRITE) | **Sonogenetics** — focused ultrasound opens US-sensitive channels Part 1 designed | sim → brain | `NeuralOutput` adapter; v1 uses a **simulated sono writer** |
+| 3 · Brain Template | Connectome graph (C. elegans + synthetic, pluggable) | — | `ConnectomeSource` loaders |
+| 4 · Virtual environment | Simulation engine + **acoustic channel model** (k-Wave/SIMUS-style) + live viz | — | Core of v1 |
+
+**Golden thread:** Part 1 designs the ion channel → Part 2-WRITE (ultrasound) opens it →
+Part 3 says which neurons express it → Part 4 simulates + visualizes the whole loop,
+and Part 2-READ (neural dust) closes it. v1 realizes this loop *in simulation* first;
+real arrays/motes swap in behind the same contracts later.
+
 ## 3. Target architecture
 
 ```
@@ -168,18 +183,28 @@ The rest of the system depends only on the normalized `Connectome` — never on 
 source produced it. Adding a third connectome later = one new class.
 
 ### 6.2 Signal I/O contracts (so molecular + hardware plug in later)
+
+**Locked mechanism pairing:** READ = **neural dust** (ultrasonic backscatter),
+WRITE = **sonogenetics** (ultrasound-gated ion channels). These are two distinct
+physical subsystems, so the contracts are split accordingly:
+
 ```python
 class NeuralInput(Protocol):
-    """Signals arriving FROM a device (molecular sensor / ultrasound read)."""
-    def read(self) -> dict[NeuronId, float]: ...   # per-neuron stimulus/current
+    """READ path — neural dust backscatter → per-neuron activity.
+    Real impl: NeuralDustReader (demodulate backscatter from an ultrasound array).
+    v1 stub:  SyntheticInput / SimulatedDustReader (from the acoustic sim)."""
+    def read(self) -> dict[NeuronId, float]: ...
 
 class NeuralOutput(Protocol):
-    """Signals sent TO a device (molecular actuator / ultrasound write)."""
-    def write(self, state: dict[NeuronId, float]) -> None: ...
+    """WRITE path — sonogenetic stimulation → drive selected neurons.
+    Real impl: SonogeneticWriter (focused ultrasound opens US-sensitive channels
+               on neurons that Part 1 made sonosensitive).
+    v1 stub:  LoggingOutput / SimulatedSonoWriter (into the acoustic sim)."""
+    def write(self, targets: dict[NeuronId, float]) -> None: ...
 ```
-v1 ships **stub adapters**: `SyntheticInput` (programmable stimulus patterns) and
-`NullOutput` / `LoggingOutput`. Real molecular & ultrasound adapters implement the
-same Protocols in a later version.
+
+Because read and write are separate hardware, the loop is only "closed" in software
+(and in the acoustic simulator) until both arrays exist.
 
 ### 6.3 Live state frame (backend → frontend, per tick)
 ```jsonc

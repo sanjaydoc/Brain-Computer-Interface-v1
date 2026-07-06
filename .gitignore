@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# Data (raw connectome downloads)
+data/connectomes/raw/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
