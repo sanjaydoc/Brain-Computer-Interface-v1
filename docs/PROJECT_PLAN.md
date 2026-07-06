@@ -2,12 +2,20 @@
 
 > Status: **DRAFT — iterating** · No code written yet · Branch: `claude/new-project-planning-bk2g71`
 
+### North Star
+**Ultimate goal = the human brain (~86B neurons, ~10¹⁴ synapses).** Every architecture
+decision is judged by whether it survives the climb worm → mouse → human. Nothing
+worm-specific is allowed into the foundation.
+
 ### Locked decisions
 - ✅ **Frontend:** Web — React + TypeScript + Three.js (react-three-fiber).
-- ✅ **Connectome:** **Pluggable loader** — C. elegans (302) *and* synthetic networks
-  are interchangeable behind one `ConnectomeSource` interface.
+- ✅ **Connectome:** **Pluggable loader** — C. elegans (302), synthetic, MICrONS mouse
+  behind one `ConnectomeSource`; multi-scale LOD ladder toward human.
 - ✅ **Neuron model:** Start with **LIF**; **Hodgkin–Huxley** as a drop-in upgrade
   behind a shared `NeuronModel` interface.
+- ✅ **Environment:** `stimulus_protocol` (universal sensory-in / activity-out) is the
+  default; `worm_body` (OpenWorm-style) is an optional worm-only add-on.
+- ✅ **Foundations:** configurability (§2.2) + scalability contract (§2.3) bind every module.
 - ⏳ **Commit of this plan:** deferred — still iterating.
 
 ---
@@ -234,6 +242,33 @@ brain-computer-interface-v1/
 │   └── ...
 └── README.md
 ```
+
+---
+
+## 5.1 Part 4 — the virtual environment (design)
+
+The virtual environment runs the twin and closes the loop. Built human-brain-first:
+sim scale is decoupled from viz scale, and nothing is worm-specific.
+
+**Five sub-systems (all obey §2.2 config + §2.3 scalability):**
+
+1. **Sim core** — `Stepper` over SoA state + CSR connectivity → one step = sparse matvec.
+   v1 `cpu_numpy`; seam for `gpu` / distributed. O(E)/step.
+2. **Acoustic channel** — `AddressingModel` maps neuron ids ↔ focal coordinates.
+   WRITE = focal_mask × expression (sonogenetic); READ = mote pooling (neural dust).
+   v1 `idealized`; seam for `realistic`. Spatial-index queries, O(near focus).
+3. **Environment** — `Environment` seam. Default `stimulus_protocol` (universal
+   sensory-in / activity-out, worm→human); optional `worm_body` (OpenWorm-style).
+   Stimuli as sparse events, O(events).
+4. **Observation/streaming** — sim runs full-scale headless; viz gets a
+   **view-dependent, delta, binary** projection ("this region @ this zoom").
+   v1 `every_tick` all-302; same protocol later streams viewport subset. O(visible+changed).
+5. **Visualization** — LOD renderer (instancing → density fields). v1 `full`; seam for `lod`.
+
+**The loop per tick:** `read (dust) → step → write (sono) → publish snapshot`.
+One authoritative loop mutates the twin; everyone else reads immutable snapshots (§6.3).
+
+**Open refinements (settle at build):** focal-blur on/off in v1; snapshot every-tick vs every-N.
 
 ---
 
