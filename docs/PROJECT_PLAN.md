@@ -213,6 +213,37 @@ Because read and write are separate hardware, the loop is only "closed" in softw
 
 ---
 
+## 6.3 The Brain Template — a living digital twin (design B, locked)
+
+The Template is **the brain object itself**, not passive data. It owns three layers in
+one stateful object; the simulation engine is a *stepper* that mutates it in place, and
+the visualization + I/O adapters all read/write **this single source of truth**.
+
+```
+BrainTemplate  (the living digital twin — one object, the source of truth)
+├── structure      neurons + synapses          (immutable after load; from ConnectomeSource)
+├── annotation     per-neuron BCI addressing    (mostly static)
+│     ├── sono:  is sonosensitive? channel id (from De-Novo-LLM), dose→open curve
+│     ├── dust:  has a mote? mote id, backscatter signature
+│     └── space: 3D coordinate (focal-point addressing for ultrasound)
+└── state         live per-neuron values        (mutated every tick)
+      ├── v (membrane potential), spiking, refractory timer
+      └── last-write / last-read bookkeeping
+```
+
+**Consequences of choosing "living object" (B):**
+- **Engine = stepper, not state-owner.** `engine.step(brain, dt)` mutates `brain.state`
+  in place. No separate state store to keep in sync.
+- **Single ownership / one loop.** To avoid races between step, viz-read, and
+  Part-2 adapter read/write, the sim runs one authoritative loop: `read inputs →
+  step → apply outputs → publish snapshot`. Everyone else consumes **immutable
+  per-tick snapshots**, never the live object directly.
+- **Snapshot-able.** The twin must serialize (save/load/`scrub time`) → enables
+  reproducibility, rewind, and "load a brain state."
+- **Uniform identity + coordinates** across sources: C. elegans (named neurons, real
+  positions) and synthetic (generated ids/positions) both fill the same Template shape,
+  so nothing downstream knows which was loaded.
+
 ## 7. Simulation model for v1
 
 Start simple and correct, leave room to deepen:
