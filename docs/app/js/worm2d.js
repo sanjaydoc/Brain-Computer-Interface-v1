@@ -26,22 +26,28 @@ export class WormViz {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  // drive: 0..~1.5 speed multiplier · dir: +1/-1 · activity: 0..1 (glow) · turn: curvature
+  // drive: crawl speed from neural activity (0 = still) · dir: +1/-1 · activity: glow · turn
   frame({ drive = 1, dir = 1, activity = 0.3, turn = 0 } = {}) {
-    const v = this.base * Math.max(0.15, drive);
+    const v = this.base * Math.max(0, drive);   // 0 activity → 0 crawl (no gimmick motion)
     this.dir = dir;
-    // wander + optional commanded turn; reversals gently curve
     this.theta += (Math.sin(this.phase * 0.13) * 0.02) + turn * 0.05;
     const head = this.trail[0];
     let nx = head.x + Math.cos(this.theta) * v * dir;
     let ny = head.y + Math.sin(this.theta) * v * dir;
-    // bounce off walls
     const m = 24;
     if (nx < m || nx > this.w - m) { this.theta = Math.PI - this.theta; nx = Math.min(this.w - m, Math.max(m, nx)); }
     if (ny < m || ny > this.h - m) { this.theta = -this.theta; ny = Math.min(this.h - m, Math.max(m, ny)); }
-    this.trail.unshift({ x: nx, y: ny });
-    while (this.trail.length > this.bodyLen) this.trail.pop();
-    this.phase += 0.35 * v;
+    // Rope-follow: keep a fixed segment length between body points. Commit a new point
+    // when the head is a segment away from the neck; otherwise just slide the head.
+    // This keeps the body its full length at rest (no collapse) with no drifting tail.
+    const neck = this.trail[1] || head;
+    if (Math.hypot(nx - neck.x, ny - neck.y) >= 3.2) {
+      this.trail.unshift({ x: nx, y: ny });
+      while (this.trail.length > this.bodyLen) this.trail.pop();
+    } else {
+      this.trail[0] = { x: nx, y: ny };
+    }
+    this.phase += 0.35 * v;   // undulation advances only with neural drive
     this.draw(activity);
   }
 

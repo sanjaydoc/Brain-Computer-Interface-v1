@@ -43,9 +43,9 @@ class Engine:
         neuron_impl: str = "lif",
         neuron_params: dict | None = None,
         gsyn: float = 0.9,
-        bias: float = 0.02,
-        noise: float = 0.03,
-        global_inhibition: float = 0.9,
+        bias: float = 0.05,      # background excitability -> sustained spontaneous activity
+        noise: float = 0.05,
+        global_inhibition: float = 2.2,
         stim_decay: float = 0.96,
         row_normalize: bool = True,
         seed: int = 0,
@@ -88,7 +88,7 @@ class Engine:
         drive = syn + self.stim + self.bias - gi
         drive += (self.rng.random(self.n, dtype=np.float32) - 0.5) * self.noise
         self.spikes = self.neuron.step(drive, dt)
-        self.pop = self.pop * 0.7 + (self.spikes.mean()) * 0.3
+        self.pop = self.pop * 0.9 + (self.spikes.mean()) * 0.1
         self.stim *= self.stim_decay
         self.t += 1
 

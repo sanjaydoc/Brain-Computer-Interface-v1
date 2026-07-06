@@ -10,7 +10,8 @@ environment with live 3D visualization.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0d0d0f.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-2f6fed.svg)](https://www.python.org/)
-[![Build: P1 worm](https://img.shields.io/badge/build-P1%20worm%20✓-0e9f6e.svg)](docs/PROJECT_PLAN.md)
+[![Build: v1 complete](https://img.shields.io/badge/build-v1%20complete%20✓-0e9f6e.svg)](docs/PROJECT_PLAN.md)
+[![Tests](https://img.shields.io/badge/tests-17%20passing-0e9f6e.svg)](backend/tests)
 [![Scale](https://img.shields.io/badge/proven-10M%20neurons-635bff.svg)](#-scalability-proven-not-promised)
 [![North Star](https://img.shields.io/badge/target-86B%20neurons-d98218.svg)](#-the-scale-ladder)
 
@@ -228,8 +229,25 @@ touch → reversal, posterior touch → forward.**
 </div>
 
 Try it live: **[control plane →](https://sanjaydoc.github.io/Brain-Computer-Interface-v1/app/)**
-— press **▶ Run brain**, click **Anterior/Posterior touch**, or click any neuron to stimulate it.
-Panels: **Biomolecules** · **Scanner** · **Brain Template** · **Virtual Env** · **Live 3D** · **System**.
+— press **▶ Run brain**, drive **AVB** (forward) or **AVA** (reverse), or click any neuron to stimulate it.
+Panels: **Biomolecules** · **Scanner** · **Brain Template** · **Virtual Env** · **System**.
+
+### ⚠️ Every worm movement is a genuine output of the connectome — no scripted logic
+
+There is **no hand-authored behavior, no timers, no "if touched then reverse" gimmick**
+anywhere in the worm's motion. The full chain is real:
+
+1. A **leaky integrate-and-fire simulation** runs over the real 302-neuron connectome
+   (per-neuron synaptic normalization + inhibition keep it structured). The network is
+   **spontaneously active** — the command neurons fluctuate on their own.
+2. **Locomotion is decoded live** from the command interneurons (forward AVB/PVC −
+   reverse AVA/AVE/AVD). That decoded signal — and *only* that — sets the worm's
+   direction and speed. A quiet brain → a still worm.
+3. The body integrates the motor signal (neuromuscular smoothing) to crawl continuously.
+
+Drive **AVA** and the worm reverses; drive **AVB** and it crawls forward — because that
+is what the wiring does, verified by a test (`test_locomotion_emerges_from_command_neurons`).
+The browser demo and the Python engine (`bci run`) run the **same** model.
 
 ---
 
@@ -283,10 +301,13 @@ Brain-Computer-Interface-v1/
 ## 🧭 Roadmap
 
 - [x] **P0 — Spine** · config + registry, connectome SoA/sparse model, synthetic source, **10M-neuron proof**
-- [x] **P1 — Worm** · real *C. elegans* connectome (Cook 2019 + OpenWorm) loads + **renders in 3D** in the browser
-- [x] **P2–P4 preview (demo mode)** · **run the brain** (LIF), **write stimuli**, watch the **worm crawl** — live in the browser, no backend
-- [ ] **P2 — Python engine** · headless LIF engine + tests (parity with the browser demo)
-- [ ] **P3 — Live streaming** · backend → WebSocket → the same viewer at scale
+- [x] **P1 — Worm** · real *C. elegans* connectome (Cook 2019 + OpenWorm) loads + **renders in 3D**
+- [x] **P2 — Simulation** · Python LIF engine + sparse stepper; **locomotion emerges from the connectome** (17 tests)
+- [x] **P3 — Live** · FastAPI + WebSocket streaming (`bci serve`); browser demo-mode mirror
+- [x] **P4 — Loop** · sonogenetic write + neural-dust read contracts + stimulus environment (the four-part loop)
+- [x] **P5 — Cockpit** · full GUI panels (Brain template · Biomolecules · Scanner · Virtual env · System) + CI
+
+**v1 complete.** Next horizon: the scale ladder — MICrONS mouse column (LOD rendering), GPU stepper, then mesoscale.
 - [ ] **P5 — Cockpit** · full GUI control-plane panels + polish
 
 ---

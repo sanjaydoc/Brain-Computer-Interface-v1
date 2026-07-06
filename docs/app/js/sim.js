@@ -19,9 +19,10 @@ export class BrainSim {
     this.n = n;
     this.v = new Float32Array(n);
     this.refr = new Float32Array(n);
-    this.fired = new Uint8Array(n);
+    this.fired = new Uint8Array(n);    // spikes from the previous step
     this.act = new Float32Array(n);
     this.stim = new Float32Array(n);
+    this.syn = new Float32Array(n);    // synaptic input buffer (synchronous update)
 
     this.idx = {};
     data.ids.forEach((name, i) => { this.idx[name] = i; });
@@ -45,33 +46,42 @@ export class BrainSim {
       this.roleIdx[k] = names.map((nm) => this.idx[nm]).filter((x) => x !== undefined);
 
     this.tau = 20; this.vth = 1.0; this.vreset = 0; this.refrLen = 4;
-    this.bias = 0.02; this.noise = 0.03; this.stimDecay = 0.96;
-    this.globalInh = 0.9; this.pop = 0; this.t = 0;
+    // background excitability → the network is spontaneously active, so the command
+    // neurons fluctuate on their own and the worm moves from genuine connectome dynamics.
+    this.bias = 0.05; this.noise = 0.05; this.stimDecay = 0.96;
+    this.globalInh = 2.2; this.pop = 0; this.t = 0;
   }
 
   stimulate(indices, amount = 3.4) { for (const i of indices) if (i !== undefined) this.stim[i] += amount; }
   stimulateRole(role, amount = 3.4) { this.stimulate(this.roleIdx[role] || [], amount); }
 
   step() {
-    const { n, v, refr, fired, act, stim, out, gsyn, tau, vth, noise, bias } = this;
+    const { n, v, refr, fired, act, stim, out, syn, gsyn, tau, vth, noise, bias } = this;
     const gi = this.globalInh * this.pop;
+    // synaptic input from the PREVIOUS step's spikes (synchronous update — matches the
+    // Python engine; no within-step avalanche).
+    syn.fill(0);
+    for (let i = 0; i < n; i++) {
+      if (!fired[i]) continue;
+      const e = out[i];
+      for (let k = 0; k < e.length; k++) syn[e[k][0]] += e[k][1];
+    }
+    // integrate
     for (let i = 0; i < n; i++) {
       fired[i] = 0;
       if (refr[i] > 0) { refr[i] -= 1; v[i] = this.vreset; continue; }
-      v[i] += -v[i] / tau + bias + stim[i] - gi + (Math.random() - 0.5) * noise;
+      v[i] += -v[i] / tau + bias + stim[i] - gi + syn[i] * gsyn + (Math.random() - 0.5) * noise;
       if (v[i] < -0.5) v[i] = -0.5;
       stim[i] *= this.stimDecay;
     }
+    // spikes
     let nf = 0;
     for (let i = 0; i < n; i++) {
-      if (refr[i] > 0) continue;
-      if (v[i] >= vth) {
+      if (refr[i] <= 0 && v[i] >= vth) {
         fired[i] = 1; nf++; v[i] = this.vreset; refr[i] = this.refrLen;
-        const e = out[i];
-        for (let k = 0; k < e.length; k++) v[e[k][0]] += e[k][1] * gsyn;
       }
     }
-    this.pop = this.pop * 0.7 + (nf / n) * 0.3;
+    this.pop = this.pop * 0.9 + (nf / n) * 0.1;
     for (let i = 0; i < n; i++) act[i] = act[i] * 0.93 + fired[i] * 0.5;
     this.t += 1;
   }
