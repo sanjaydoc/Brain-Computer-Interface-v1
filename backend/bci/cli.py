@@ -29,6 +29,26 @@ def _sources() -> None:
     print("connectome sources:", ", ".join(sources.keys()))
 
 
+def _run(impl: str, steps: int) -> None:
+    """Run the full four-part loop headless and show emergent locomotion."""
+    from .runtime import Runtime
+
+    events = [
+        {"t": 120, "role": "fwd", "amount": 3.4},   # drive forward command
+        {"t": 360, "role": "rev", "amount": 3.4},   # drive reverse command
+    ]
+    rt = Runtime.build(connectome_impl=impl, events=events)
+    print(f"running {impl}: {rt.engine.n} neurons — driving fwd@120, rev@360\n")
+    print(f"{'t':>5} {'firing':>7} {'locomotion':>11}  behavior")
+    for _ in range(steps):
+        rt.step()
+        if rt.engine.t % 40 == 0:
+            s = rt.snapshot()
+            loco = s["locomotion"]
+            beh = "reverse ←" if loco < -0.02 else ("forward →" if loco > 0.02 else "idle")
+            print(f"{s['t']:>5} {s['firing']:>7} {loco:>+11.3f}  {beh}")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="bci")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -38,11 +58,25 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("sources", help="list registered connectome sources")
 
+    p_run = sub.add_parser("run", help="run the full four-part loop headless")
+    p_run.add_argument("--connectome", default="celegans", help="connectome source (default: celegans)")
+    p_run.add_argument("--steps", type=int, default=520, help="number of steps")
+
+    p_serve = sub.add_parser("serve", help="serve the REST + WebSocket live API")
+    p_serve.add_argument("--host", default="127.0.0.1")
+    p_serve.add_argument("--port", type=int, default=8000)
+
     args = parser.parse_args(argv)
     if args.cmd == "load":
         _load(args.profile)
     elif args.cmd == "sources":
         _sources()
+    elif args.cmd == "run":
+        _run(args.connectome, args.steps)
+    elif args.cmd == "serve":
+        import uvicorn
+
+        uvicorn.run("bci.api.app:app", host=args.host, port=args.port)
     return 0
 
 
