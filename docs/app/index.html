@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BCI — control plane</title>
+  <meta name="description" content="Brain-Computer-Interface control plane: load a connectome and view the living digital twin in 3D." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/theme.css" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="wrap">
+      <a class="brand" href="../">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="9" cy="16" r="3" fill="currentColor"/>
+          <circle cx="23" cy="9" r="2.4" fill="currentColor"/>
+          <circle cx="24" cy="22" r="2.4" fill="currentColor"/>
+          <path d="M11.6 14.7 20.8 9.8M11.7 17.2 21.7 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        bci <span class="muted">control plane</span>
+      </a>
+      <div class="nav-links">
+        <a href="../">Home</a>
+        <a href="../PROJECT_PLAN.md">Plan</a>
+        <a class="btn btn-sm" href="https://github.com/sanjaydoc/Brain-Computer-Interface-v1">GitHub ↗</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="tabs wrap">
+    <button class="tab active">🕸️ Brain template</button>
+    <button class="tab" disabled>🧬 Biomolecules</button>
+    <button class="tab" disabled>🔊 Scanner</button>
+    <button class="tab" disabled>🌐 Virtual env</button>
+    <button class="tab" disabled>⚙️ System</button>
+    <span class="tab-note muted">more panels arrive with P2–P5</span>
+  </div>
+
+  <main class="stage">
+    <div id="viewer" class="viewer">
+      <div id="loading" class="loading">Loading connectome…</div>
+      <div class="overlay stats">
+        <div class="eyebrow">Brain template</div>
+        <h3 id="cx-name">—</h3>
+        <div class="statrow"><span>neurons</span><b id="cx-neurons">—</b></div>
+        <div class="statrow"><span>synapses</span><b id="cx-synapses">—</b></div>
+        <div class="statrow"><span>source</span><b>real (Cook 2019 + OpenWorm)</b></div>
+      </div>
+      <div class="overlay controls">
+        <label class="ctl"><input type="checkbox" id="spin" checked /> auto-rotate</label>
+        <label class="ctl"><input type="checkbox" id="edges" checked /> synapses</label>
+        <label class="ctl">synapse opacity <input type="range" id="edgeop" min="0" max="100" value="18" /></label>
+        <button class="btn act" id="reset">reset view</button>
+      </div>
+      <div class="overlay inspector" id="inspector" hidden>
+        <div class="eyebrow">neuron</div>
+        <h3 id="i-id">—</h3>
+        <div class="statrow"><span>type</span><b id="i-type">—</b></div>
+        <div class="statrow"><span>out-degree</span><b id="i-deg">—</b></div>
+        <div class="muted small">click a neuron to inspect · click empty space to clear</div>
+      </div>
+      <div class="legend"><span class="lo">low</span><span class="ramp"></span><span class="hi">high out-degree</span></div>
+    </div>
+  </main>
+
+  <script type="module" src="js/viewer.js"></script>
+</body>
+</html>
