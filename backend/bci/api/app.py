@@ -9,13 +9,18 @@ now streamed.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..connectome import sources
 from ..molecular import MolecularService, SonogeneticChannel, test_on_connectome
 from ..runtime import Runtime
+
+# repo_root/docs — the GUI (served so it's same-origin as the API → live mode works)
+DOCS = Path(__file__).resolve().parents[3] / "docs"
 
 
 class GenerateReq(BaseModel):
@@ -109,6 +114,10 @@ def create_app() -> FastAPI:
                 await asyncio.sleep(0.033)
         except WebSocketDisconnect:
             return
+
+    # Serve the GUI last so /api/* and /ws take precedence. Open /app/ for the cockpit.
+    if DOCS.is_dir():
+        app.mount("/", StaticFiles(directory=str(DOCS), html=True), name="gui")
 
     return app
 

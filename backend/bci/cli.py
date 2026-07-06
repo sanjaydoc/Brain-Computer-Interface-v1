@@ -76,6 +76,8 @@ def main(argv: list[str] | None = None) -> int:
     elif args.cmd == "serve":
         import uvicorn
 
+        print(f"\n  BCI control plane → http://{args.host}:{args.port}/app/")
+        print(f"  API + live WebSocket → http://{args.host}:{args.port}/api/health\n")
         uvicorn.run("bci.api.app:app", host=args.host, port=args.port)
     return 0
 
