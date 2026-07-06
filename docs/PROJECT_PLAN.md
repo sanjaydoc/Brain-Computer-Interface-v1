@@ -168,7 +168,31 @@ brain-computer-interface-v1/
 }
 ```
 
-### 6.1b Pluggable connectome source (C. elegans OR synthetic)
+### 6.1a Scale ladder — the multi-scale Brain Template (North Star: human)
+
+The Template is **multi-scale / level-of-detail (LOD)**: the same twin represented at
+different granularities, with the viz swapping representation by zoom ("Google Maps for
+the brain"). Each rung is a *real, buildable tier* behind the same `ConnectomeSource`.
+
+| Rung | Source | Neurons | Data status | Fidelity | Role |
+|------|--------|---------|-------------|----------|------|
+| 1 | **C. elegans** (OpenWorm) | 302 | ✅ real & complete | per-neuron/synapse | v1 anchor — prove the loop |
+| 2 | **MICrONS `minnie65`** (mouse V1 mm³) | ~200k (proofread subset first) | ✅ real EM (CAVE) | per-neuron/synapse | "first mouse" — prove LOD/scale |
+| 3 | **Mouse mesoscale** (Allen Connectivity Atlas) | ~71M via ~regions | ✅ real (region-level) | neural-mass per region | whole mouse (not per-synapse) |
+| 4 | **Human** | ~86B / ~10¹⁴ syn | ✖ statistical only | population/region models | North Star |
+
+Notes that shape the design:
+- **No whole-mouse per-synapse connectome exists** — Rung 3 is region-level neural-mass,
+  and any per-neuron whole-mouse twin must be *generated* (mesoscale + statistical wiring
+  → `SyntheticSource` territory).
+- **Whole-mouse/human real-time per-neuron sim is HPC-class**, not v1. LOD + region
+  aggregation is how the viz stays real-time at scale.
+- `MICrONSSource`: pull graph via `caveclient` (`minnie65_public`, `client.materialize`
+  synapse + cell-type + proofread tables), soma coords via CloudVolume; extract nodes+edges,
+  normalize to the standard schema, cache as Parquet. The petabyte of EM imagery is *not*
+  needed — only the connectivity graph.
+
+### 6.1b Pluggable connectome source (C. elegans OR synthetic OR MICrONS)
 ```python
 class ConnectomeSource(Protocol):
     """Anything that can produce a Connectome graph."""
@@ -178,6 +202,8 @@ class CElegansSource:   # loads + converts OpenWorm NeuroML/CSV to the schema ab
     ...
 class SyntheticSource:  # generates N neurons with configurable wiring + seed
     def __init__(self, n: int, wiring: WiringRule, seed: int): ...
+class MICrONSSource:    # pulls minnie65_public graph via caveclient, caches Parquet
+    def __init__(self, proofread_only: bool = True, region: str | None = None): ...
 ```
 The rest of the system depends only on the normalized `Connectome` — never on which
 source produced it. Adding a third connectome later = one new class.
