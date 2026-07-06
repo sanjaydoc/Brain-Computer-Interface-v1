@@ -1,0 +1,10 @@
+# Profile: a small synthetic brain — smoke test for the P0 spine.
+# Scaling up later = point `impl` at another source (celegans / microns) or bump n.
+name: synthetic_small
+
+connectome:
+  impl: synthetic
+  params:
+    n: 1000
+    avg_degree: 10
+    seed: 0
