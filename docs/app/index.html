@@ -49,12 +49,18 @@
         <h3 id="cx-name">—</h3>
         <div class="statrow"><span>neurons</span><b id="cx-neurons">—</b></div>
         <div class="statrow"><span>synapses</span><b id="cx-synapses">—</b></div>
-        <div class="statrow"><span>source</span><b>real (Cook 2019 + OpenWorm)</b></div>
+        <div class="statrow"><span>firing now</span><b id="cx-firing">0</b></div>
       </div>
       <div class="overlay controls">
+        <button class="btn" id="run">▶ Run brain</button>
+        <div class="eyebrow" style="margin-top:.3rem">write a stimulus</div>
+        <button class="btn act" id="stim-ant">Anterior touch →</button>
+        <button class="btn act" id="stim-post">← Posterior touch</button>
+        <div class="muted small">…or click any neuron to stimulate it</div>
+        <hr class="divider" />
         <label class="ctl"><input type="checkbox" id="spin" checked /> auto-rotate</label>
         <label class="ctl"><input type="checkbox" id="edges" checked /> synapses</label>
-        <label class="ctl">synapse opacity <input type="range" id="edgeop" min="0" max="100" value="18" /></label>
+        <label class="ctl">synapse <input type="range" id="edgeop" min="0" max="100" value="14" /></label>
         <button class="btn act" id="reset">reset view</button>
       </div>
       <div class="overlay inspector" id="inspector" hidden>
@@ -62,10 +68,22 @@
         <h3 id="i-id">—</h3>
         <div class="statrow"><span>type</span><b id="i-type">—</b></div>
         <div class="statrow"><span>out-degree</span><b id="i-deg">—</b></div>
-        <div class="muted small">click a neuron to inspect · click empty space to clear</div>
+        <div class="muted small">click to stimulate · click empty space to clear</div>
       </div>
-      <div class="legend"><span class="lo">low</span><span class="ramp"></span><span class="hi">high out-degree</span></div>
+      <div class="legend"><span class="lo">quiet</span><span class="ramp"></span><span class="hi">firing</span></div>
     </div>
+
+    <aside class="venv">
+      <div class="venv-head">
+        <div class="eyebrow">Virtual environment</div>
+        <div class="loco" id="loco">idle</div>
+      </div>
+      <canvas id="worm" class="worm-canvas"></canvas>
+      <div class="venv-note muted">
+        The worm's body is driven live by its command neurons.
+        <b>Anterior touch → reversal · posterior touch → forward crawl.</b>
+      </div>
+    </aside>
   </main>
 
   <script type="module" src="js/viewer.js"></script>
