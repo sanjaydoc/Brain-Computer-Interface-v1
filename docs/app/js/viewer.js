@@ -100,7 +100,9 @@ function build(d) {
   worm = new WormViz($('worm'));
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
-  resize(); requestAnimationFrame(resize); animate();
+  resize(); requestAnimationFrame(resize);
+  toggleRun(true);   // the brain is spontaneously active from the start
+  animate();
 }
 
 const col = new THREE.Color();
@@ -119,13 +121,18 @@ function updateNeuronColors() {
   neuronMesh.instanceColor.needsUpdate = true;
 }
 
+let smAct = 0, smLoco = 0;   // muscle-integrated (smoothed) motor drive
 function driveWorm() {
-  const cmd = sim.locomotion();  // decoded live: forward − reverse command activity
+  // Everything here comes from the connectome simulation — no scripted motion.
+  // The body integrates motor output (neuromuscular smoothing), so the crawl is
+  // continuous even though neural firing pulses.
   let mean = 0; for (let i = 0; i < sim.n; i++) mean += sim.act[i]; mean /= sim.n;
-  const active = mean > 0.015;
-  const dir = cmd < -0.02 ? -1 : 1;
-  const drive = active ? (0.4 + 2.0 * Math.abs(cmd) + 1.4 * mean) : 0.18;
-  worm.frame({ drive, dir, activity: mean, turn: dir < 0 ? 0.7 : 0 });
+  smAct = smAct * 0.9 + mean * 0.1;
+  smLoco = smLoco * 0.9 + sim.locomotion() * 0.1;
+  const active = smAct > 0.02;
+  const dir = smLoco < -0.02 ? -1 : 1;
+  const drive = active ? (0.15 + 3.4 * smAct + 1.3 * Math.abs(smLoco)) : 0;
+  worm.frame({ drive, dir, activity: smAct, turn: dir < 0 ? 0.7 : 0 });
 
   const loco = $('loco');
   if (!active) { loco.textContent = 'idle'; loco.className = 'loco'; }
@@ -144,9 +151,8 @@ function animate() {
     for (let s = 0; s < 2; s++) sim.step();
     updateNeuronColors();
     driveWorm();
-  } else if (worm) {
-    worm.frame({ drive: 0.2, dir: 1, activity: 0 }); // gentle idle wiggle
   }
+  // when paused, nothing moves — the worm only moves from live brain activity
   renderer.render(scene, camera);
   frame++;
 }

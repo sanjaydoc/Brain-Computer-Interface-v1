@@ -97,16 +97,15 @@
     const worm = new WormViz(document.getElementById('hero-worm'), { bodyLen: 110, width: 17, base: 1.7 });
     addEventListener('resize', () => worm.resize());
     fetch('./app/data/celegans.json').then((r) => r.json()).then((d) => {
-      const sim = new BrainSim(d);
-      let t = 0, nextStim = 60;
+      const sim = new BrainSim(d);  // spontaneously active — no scripted stimulus
+      let smAct = 0, smLoco = 0;
       (function loop() {
-        t++;
         for (let s = 0; s < 2; s++) sim.step();
-        if (t > nextStim) { sim.stimulateRole(Math.random() < 0.4 ? 'rev' : 'fwd'); nextStim = t + 80 + Math.random() * 150; }
-        const loco = sim.locomotion();
         let mean = 0; for (let i = 0; i < sim.n; i++) mean += sim.act[i]; mean /= sim.n;
-        const active = mean > 0.015, dir = loco < -0.02 ? -1 : 1;
-        worm.frame({ drive: active ? 0.5 + 1.7 * Math.abs(loco) + 1.2 * mean : 0.22, dir, activity: mean, turn: dir < 0 ? 0.6 : 0 });
+        smAct = smAct * 0.9 + mean * 0.1;                          // neuromuscular smoothing
+        smLoco = smLoco * 0.9 + sim.locomotion() * 0.1;            // decoded from command neurons
+        const dir = smLoco < -0.02 ? -1 : 1;                       // direction emerges from the connectome
+        worm.frame({ drive: smAct > 0.02 ? 0.15 + 3.3 * smAct + 1.2 * Math.abs(smLoco) : 0, dir, activity: smAct, turn: dir < 0 ? 0.6 : 0 });
         requestAnimationFrame(loop);
       })();
     });
