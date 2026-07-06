@@ -1,0 +1,7 @@
+# Profile: the real C. elegans worm — Rung 1 of the scale ladder.
+# 302 neurons, ~5,900 synapses, real anatomical 3D positions (Cook 2019 + OpenWorm).
+name: celegans_worm
+
+connectome:
+  impl: celegans
+  params: {}

@@ -1,0 +1,303 @@
+id,type,x,y,z
+FLPL,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",10.875,-246.3,31.05
+M3L,Pharyngeal sensory-motorneurons,3.7500002,-295.4,48.15
+PVNL,"Interneuron/motor neuron, post. vent. cord, few synapses",0.55,410.0,8.900001
+MCR,Pharyngeal neurons that synapse onto marginal cells,-7.25,-296.15,52.3
+ASKR,"Amphid neurons, single ciliated endings",-8.0,-268.025,46.399998
+AVG,Ventral cord interneuron,-2.0,-237.1,12.85
+ASJL,"Amphid neurons, single ciliated endings",2.9750001,-263.0,37.475
+AWBR,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",-9.75,-266.225,43.1
+RMHR,Ring motor neuron/interneuron,-5.2999997,-265.9,35.7
+DA3,"Ventral cord motor neurons, innervate dorsal muscles",-1.65,-123.65,-58.350002
+AVBL,Ventral cord interneuron,0.225,-269.794,37.863003
+URADL,Ring motor neuron,5.0,-284.65,52.2
+RIVL,Ring interneuron,4.5,-265.30002,50.35
+SAADL,"Ring interneuron, anteriorly projecting process that runs sublaterally",-4.6879997,-270.169,42.131
+AS6,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.9,28.25,-34.25
+AWAL,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",3.9,-265.875,42.75
+OLQDL,Quadrant outer labial neuron,2.775,-280.0,53.425003
+DD6,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",-1.9,365.775,-16.475
+VB7,"Ventral cord motor neuron, innervates vent. body muscles",-9.675,41.45,-24.362
+ASJR,"Amphid neurons, single ciliated endings",-7.25,-263.0,37.475
+RIVR,Ring interneuron,-8.75,-265.30002,50.35
+SAAVL,"Ring interneuron, anteriorly projecting process that runs sublaterally",3.9,-270.90002,45.425
+AFDL,Amphid finger cell,4.5,-268.375,43.5
+DD3,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",-1.9,-28.600002,-60.525
+URYDL,"Neuron, presynaptic in ring, ending in head",4.125,-281.425,51.899998
+SIADL,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",-3.958,-267.658,43.967
+M5,Pharyngeal motorneuron,-2.2,-241.45,41.800003
+AFDR,Amphid finger cell,-8.75,-268.375,43.5
+CEPDL,"Cephalic neurons, contain dopamine",1.35,-275.02502,54.075005
+ADAR,Ring interneuron,-12.9,-239.25,31.05
+SIBVL,Similar to SIA,-2.667,-269.867,35.408
+DA6,"Ventral cord motor neurons, innervate dorsal muscles",-1.65,198.675,-6.3500004
+BDUL,"Neuron, process runs along excretory canal and into ring, unique darkly staining synaptic vesicles",15.35,-187.15,-0.2
+IL2DR,Inner labial neuron,-11.35,-287.47498,57.125004
+RIPL,"Ring/pharynx interneuron, only direct connection between pharynx and ring",3.3750002,-278.57498,48.824997
+VB2,"Ventral cord motor neuron, innervates vent. body muscles",-2.0,-253.3,19.85
+AIZR,Amphid interneuron,-9.95,-258.75,37.45
+VC4,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,-1.15,43.85,-24.2
+PVM,"Posterior ventral microtubule cell, touch receptor",24.85,188.8,20.550001
+AIMR,Ring interneuron,-13.500001,-253.44998,28.400002
+PVWR,"Interneuron, posterior ventral cord, few synapses",-3.4,405.4,6.8
+PVWL,"Interneuron, posterior ventral cord, few synapses",0.8,405.4,6.8
+PHCR,"Neuron, striated rootlet in male, possibly sensory in tail spike",-3.425,408.775,7.275
+NSMR,"Pharyngeal neurosecretory motorneuron, contain serotonin",-6.3500004,-292.25,51.8
+RICL,Ring interneuron,-0.737,-267.063,38.087
+VA12,"Ventral cord motor neuron, innervates vent. body muscles, but also interneuron in preanal ganglion",-0.1,362.45,-18.15
+AVFR,Interneuron,-6.5,-246.4,18.6
+AIML,Ring interneuron,9.25,-253.44998,28.400002
+I5,"Pharyngeal interneuron, post sensory",-2.1,-247.84999,30.675
+PVDL,"Neuron, lateral process adjacent to excretory canal",24.749,175.151,24.952
+DB2,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor (aka DB3/1)",-0.2,-244.5,15.787
+M3R,Pharyngeal sensory-motorneurons,-8.05,-295.4,48.15
+CEPVL,"Cephalic neurons, contain dopamine",0.70000005,-277.125,39.925
+AVDR,Ventral cord interneuron,-4.033,-268.683,37.283
+LUAR,"Interneuron, short process in post ventral cord",-3.85,403.80002,4.1
+I6,"Pharyngeal interneuron, post sensory",1.7,-251.65,43.05
+VD6,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.70000005,-1.4000001,-52.149998
+URXL,Ring interneuron,3.05,-269.875,48.275
+PVT,"Interneuron, projects along ventral cord to ring",-0.1,358.75,-17.5
+SDQL,"Post. lateral interneuron, process projects into ring",21.4,222.79999,19.2
+DA8,"Ventral cord motor neurons, innervate dorsal muscles",1.275,376.8,-10.925
+URYDR,"Neuron, presynaptic in ring, ending in head",-8.4,-281.425,51.899998
+VA9,"Ventral cord motor neuron, innervates vent. body muscles",-1.8,208.825,-9.049999
+AS5,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.8750001,-3.7500002,-52.525
+VC1,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,-0.72499996,-170.02501,-35.75
+RIAR,"Ring interneuron, many synapses",-8.2,-270.25,45.0
+SABVR,"Ring interneuron, anteriorly projecting process that runs sublaterally, synapses to anterior body muscles in L1",-8.1,-249.25,24.349998
+DD5,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",-1.8750001,234.05002,-15.775
+AVAL,Ventral cord interneuron,-0.55,-271.5,37.983
+AVEL,"Ventral cord interneuron, like AVD but outputs restricted to anterior cord",2.75,-269.35,40.65
+AWCL,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",3.8,-267.95,38.95
+AVER,"Ventral cord interneuron, like AVD but outputs restricted to anterior cord",-8.4,-269.35,40.65
+PVCR,"Ventral cord interneuron, cell body in lumbar ganglion, synapses onto VB and DB motor neurons, formerly called delta",-3.4499998,404.15002,5.5
+AS7,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.9,119.9,3.9500003
+PDER,"Neuron, dopaminergic of postderid sensillum",-27.35,143.8,25.6
+VD9,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.8,191.5,-3.8
+AIAL,Amphid interneuron,0.8,-264.15,35.550003
+SABVL,"Ring interneuron, anteriorly projecting process that runs sublaterally, synapses to anterior body muscles in L1",3.325,-249.25,24.349998
+AVKL,Ring and ventral cord interneuron,1.65,-255.0,22.575
+SIBDL,Similar to SIA,-5.2669997,-269.133,45.8
+VD7,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-12.349999,57.95,-14.200001
+PVQL,"Interneuron, projects along ventral cord to ring",0.85,402.40002,5.15
+ALMR,Anterior lateral microtubule cell,-24.15,-60.75,-37.149998
+I2R,"Pharyngeal interneurons, ant sensory",-5.7999997,-311.65,54.45
+ASHR,"Amphid neurons, single ciliated endings",-9.8,-265.625,41.0
+PHBR,"Phasmid neurons, chemosensory",-3.7250001,405.60004,5.475
+ALA,"Neuron, sends processes laterally and along dorsal cord",-1.35,-271.0,50.85
+DA9,"Ventral cord motor neurons, innervate dorsal muscles",-4.6,376.8,-10.925
+RICR,Ring interneuron,-3.563,-267.063,38.087
+PVQR,"Interneuron, projects along ventral cord to ring",-3.3,402.40002,5.15
+VA4,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,-119.50001,-58.7
+VC6,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,-1.8249999,174.175,1.0
+VA8,"Ventral cord motor neuron, innervates vent. body muscles",-1.8,150.3,3.4
+URAVR,Ring motor neuron,-4.575,-279.6,41.4
+PLNR,"Interneuron, associated with PLM",-6.225,402.3,6.8999996
+VB8,"Ventral cord motor neuron, innervates vent. body muscles",-1.8249999,108.8,2.875
+RMDL,"Ring motor neuron/interneuron, many synapses",3.1,-271.0,41.2
+ADER,"Anterior deirid, sensory neuron",-15.299999,-242.375,32.45
+RIGL,Ring interneuron,0.0,-233.25,16.35
+OLLL,Lateral outer labial neurons,4.4,-283.9,50.024998
+VC3,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,-1.4499999,-6.45,-54.000004
+AQR,"Neuron, basal body. Not part of a sensillum, projects into ring",-14.8,-243.05,33.95
+VA1,"Ventral cord motor neuron, innervates vent. body muscles",-1.35,-235.55,11.75
+RIPR,"Ring/pharynx interneuron, only direct connection between pharynx and ring",-7.625,-278.57498,48.824997
+AIBR,Amphid interneuron,-6.8999996,-266.19998,37.0
+AVKR,Ring and ventral cord interneuron,-4.583,-246.95001,19.0
+IL2VL,Inner labial neuron,3.3,-288.875,42.95
+AVHR,"Neuron, mainly postsynaptic in ventral cord and presynaptic in the ring",-8.900001,-264.4,45.0
+ALNR,Neuron associated with ALM,-2.925,406.69998,12.375
+AWAR,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",-8.2,-265.875,42.75
+BAGR,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",-9.0,-277.09998,44.975002
+DB5,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",-4.05,35.25,-30.45
+AUAL,"Neuron, process runs with amphid processes but lacks ciliated ending",4.5,-263.975,37.475
+VC2,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,-0.625,-105.325,-63.4
+DD4,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",-1.8750001,122.899994,4.5499997
+VB3,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,-210.225,-8.725
+DB6,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",-1.8249999,178.1,-0.2
+RIBR,Ring interneuron,-9.8,-264.35,38.0
+PQR,"Neuron, basal body, not part of a sensillum, projects into preanal ganglion",-0.32500002,407.3,7.6499996
+BAGL,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",4.675,-277.09998,44.975002
+IL2VR,Inner labial neuron,-7.6,-288.875,42.95
+SABD,"Ring interneuron, anteriorly projecting process that runs sublaterally, synapses to anterior body muscles in L1",-3.2,-234.8,14.925
+AS1,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-0.275,-229.038,4.738
+I4,Pharyngeal interneuron,-2.05,-253.90001,43.1
+PVPL,"Interneuron, cell body in preanal ganglion, projects along ventral cord to nerve ring",-0.1,366.65002,-14.7
+RMFL,Ring motor neuron/interneuron,1.1,-265.05002,34.1
+IL1VL,Inner labial neuron,2.25,-279.5,41.0
+RIFL,Ring interneuron,0.0,-239.84999,18.35
+VB4,"Ventral cord motor neuron, innervates vent. body muscles",-2.0,-173.25,-33.5
+PVDR,"Neuron, lateral process adjacent to excretory canal",-26.113998,175.151,24.952
+AWBL,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",5.5,-266.225,43.1
+OLQDR,Quadrant outer labial neuron,-7.0249996,-280.0,53.425003
+I1L,"Pharyngeal interneurons: ant sensory, input from RIP",2.8999999,-300.35,53.149998
+VD8,"Ventralcord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.75,135.09999,3.9500003
+SMDVL,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",4.7,-270.95,46.65
+SIADR,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",-0.38300002,-269.19998,43.65
+SIAVL,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",5.9500003,-259.80002,32.25
+RMFR,Ring motor neuron/interneuron,-5.4,-265.05002,34.1
+AVJL,"Neuron, synapses like AVHL/R",0.2,-264.9,47.55
+DD2,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",-1.85,-156.47499,-42.85
+SMDDL,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",3.25,-266.25,34.1
+AS10,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.9,278.25,-24.0
+AS11,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.8750001,315.7,-26.124998
+URBR,"Neuron, presynaptic in ring, ending in head",-9.325,-279.95,47.55
+M1,Pharyngeal motorneuron,-0.86700004,-252.135,44.420002
+RMDDR,"Ring motor neuron/interneuron, many synapses",-7.75,-269.07498,37.65
+PDEL,"Neuron, dopaminergic of postderid sensillum",25.75,143.8,25.6
+URAVL,Ring motor neuron,0.32500002,-279.6,41.4
+PHBL,"Phasmid neurons, chemosensory",1.2,405.60004,5.475
+PLMR,"Posterior lateral microtubule cells, touch receptor neurons",-3.675,410.15,8.175
+NSML,"Pharyngeal neurosecretory motorneuron, contain serotonin",2.6000001,-292.25,51.8
+M2R,Pharyngeal motorneurons,-8.0,-254.34999,38.65
+AIBL,Amphid interneuron,2.7,-266.19998,37.0
+SIBDR,Similar to SIA,0.96699995,-269.133,45.8
+PLNL,"Interneuron, associated with PLM",4.225,402.3,6.8999996
+IL1R,Inner labial neuron,-8.075001,-282.67502,47.850002
+AVM,"Anterior ventral microtubule cell, touch receptor",-20.5,-55.65,-44.600002
+SAAVR,"Ring interneuron, anteriorly projecting process that runs sublaterally",-8.175,-270.90002,45.425
+SMBDR,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",-7.0,-264.3,33.1
+AS4,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.8750001,-90.200005,-65.375
+DA2,"Ventral cord motor neurons, innervate dorsal muscles",-1.9,-190.75,-21.675
+PHAL,"Phasmid neurons, chemosensory",1.2,402.9,4.1
+RMDVL,"Ring motor neuron/interneuron, many synapses",4.8500004,-271.19998,44.4
+RIGR,Ring interneuron,-4.7,-241.95001,20.65
+RMED,Ring motor neuron,-1.5,-275.75,58.499996
+AS3,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.9,-151.40001,-45.649998
+IL1VR,Inner labial neuron,-6.5499997,-279.5,41.0
+VD13,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.75,379.85,-10.75
+RMDDL,"Ring motor neuron/interneuron, many synapses",3.6,-269.07498,37.65
+VB1,"Ventral cord motor neuron, innervates vent. body muscles, also interneuron in ring",-1.55,-246.45,16.4
+I2L,"Pharyngeal interneurons, ant sensory",1.55,-311.65,54.45
+RMEL,Ring motor neuron,4.65,-274.4,46.987
+VA5,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,-54.3,-66.049995
+RIFR,Ring interneuron,-5.15,-245.5,23.9
+VD5,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.75,-68.3,-66.75
+I1R,"Pharyngeal interneurons: ant sensory, input from RIP",-7.1500006,-300.35,53.149998
+OLLR,Lateral outer labial neurons,-8.65,-283.9,50.024998
+AVHL,"Neuron, mainly postsynaptic in ventral cord and presynaptic in the ring",4.1499996,-264.4,45.0
+ALNL,Neuron associated with ALM,0.32500002,406.69998,12.375
+RIH,Ring interneuron,-2.0,-267.35,35.95
+AVL,Ring and ventral cord interneuron and an excitatory GABAergic motor neuron for rectal muscles. Few synapses,-7.5000005,-263.45,36.35
+VA6,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,21.55,-41.15
+IL1DL,Inner labial neuron,2.825,-282.763,52.762997
+DB3,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",-1.85,-195.275,-18.525
+RMGL,Ring interneuron,8.25,-238.29999,32.7
+DVA,"Ring interneurons, cell bodies in dorsorectal ganglion",-2.345,394.6,3.678
+PVPR,"Interneuron, cell body in preanal ganglion, projects along ventral cord to nerve ring",-0.15,356.55,-16.65
+IL2R,Inner labial neuron,-11.0,-285.0,49.35
+PLML,"Posterior lateral microtubule cells, touch receptor neurons",2.5,410.15,8.175
+ASIL,"Amphid neurons, single ciliated endings",2.6499999,-263.7,46.875
+SMBDL,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",3.1,-264.3,33.1
+HSNR,"Hermaphrodite specific motor neurons (die in male embryo), innervate vulval muscles, serotonergic",-21.65,61.05,6.95
+ASHL,"Amphid neurons, single ciliated endings",5.55,-265.625,41.0
+ADFR,Amphid neuron,-8.0,-267.9,41.600002
+DA7,"Ventral cord motor neurons, innervate dorsal muscles",-1.65,281.6,-24.95
+RIAL,"Ring interneuron, many synapses",4.0,-270.25,45.0
+AIAR,Amphid interneuron,-5.1,-264.15,35.550003
+RMHL,Ring motor neuron/interneuron,1.1,-265.9,35.7
+AS2,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.8750001,-203.875,-12.725
+I3,"Pharyngeal interneuron, ant sensory",-2.05,-296.55002,58.25
+CANL,"Process runs along excretory canal, no synapses, essential for survival",25.350002,47.95,1.65
+VA3,"Ventral cord motor neuron, innervates vent. body muscles",-1.475,-184.09999,-26.374998
+BDUR,"Neuron, process runs along excretory canal and into ring, unique darkly staining synaptic vesicles",-19.65,-187.15,-0.2
+AUAR,"Neuron, process runs with amphid processes but lacks ciliated ending",-8.8,-263.975,37.475
+OLQVR,Quadrant outer labial neuron,-8.474999,-279.25,43.925
+RMDVR,"Ring motor neuron/interneuron, many synapses",-9.049999,-271.19998,44.4
+VD2,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.65000004,-226.04999,2.35
+PVCL,"Ventral cord interneuron, cell body in lumbar ganglion, synapses onto VB and DB motor neurons, formerly called delta",0.85,404.15002,5.5
+URADR,Ring motor neuron,-9.3,-284.65,52.2
+M2L,Pharyngeal motorneurons,3.7,-254.34999,38.65
+AINR,Ring interneuron,-3.067,-269.542,39.357998
+DVC,"Ring interneurons, cell bodies in dorsorectal ganglion",-0.116,395.43298,5.992
+AS9,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.8750001,228.92499,-14.5
+OLQVL,Quadrant outer labial neuron,4.2,-279.25,43.925
+MI,Pharyngeal motor neuron/interneuron,-2.1539998,-293.51202,56.707
+IL2L,Inner labial neuron,6.7500005,-285.0,49.35
+VD1,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.70000005,-228.6,4.05
+AS8,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",-1.9,181.85,-1.7750001
+ASGR,"Amphid neurons, single ciliated endings",-8.0,-265.35,45.425
+VA2,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,-217.1,-3.9500003
+ASER,"Amphid neurons, single ciliated endings",-8.375,-263.675,40.05
+AVBR,Ventral cord interneuron,-4.581,-269.794,37.863003
+SIBVR,Similar to SIA,-2.767,-269.867,35.408
+RMER,Ring motor neuron,-8.900001,-274.4,46.987
+VB6,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,-36.575,-62.699997
+FLPR,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",-15.05,-246.3,31.05
+IL2DL,Inner labial neuron,7.1000004,-287.47498,57.125004
+PDA,"Motor neuron, process in dorsal cord, same as Y cell in hermaphrodite, Y.a in male",-2.95,387.25,-5.5
+ASGL,"Amphid neurons, single ciliated endings",3.7,-265.35,45.425
+SAADR,"Ring interneuron, anteriorly projecting process that runs sublaterally",0.531,-270.169,42.131
+ADFL,Amphid neuron,3.7250001,-267.9,41.600002
+RIMR,Ring motor neuron,-7.75,-260.9,39.0
+AVDL,Ventral cord interneuron,-0.167,-268.7,37.3
+RIR,Ring interneuron,-11.599999,-265.9,36.649998
+RMGR,Ring interneuron,-12.5,-238.29999,32.7
+AVFL,Interneuron,2.1,-246.4,18.6
+VC5,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,-1.15,66.549995,-12.5
+IL1DR,Inner labial neuron,-7.0620003,-282.763,52.762997
+DA1,"Ventral cord motor neurons, innervate dorsal muscles",-0.75,-227.07501,3.425
+VB9,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,159.55,3.2
+DA5,"Ventral cord motor neurons, innervate dorsal muscles",-1.65,84.2,-3.15
+RMEV,Ring motor neuron,-2.033,-272.967,35.667
+MCL,Pharyngeal neurons that synapse onto marginal cells,3.2,-296.15,52.3
+SMDDR,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",-7.4500003,-266.25,34.1
+VA11,"Ventral cord motor neuron, innervates vent. body muscles",-1.55,312.35,-26.249998
+ALML,Anterior lateral microtubule cell,22.675,-60.75,-37.149998
+ADEL,"Anterior deirid, sensory neuron",11.0,-242.375,32.45
+SIAVR,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",-10.2,-259.80002,32.25
+VD3,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.8,-188.1,-23.45
+VD11,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.8,283.80002,-24.8
+VB10,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,218.07498,-11.4
+IL1L,Inner labial neuron,3.8,-282.67502,47.850002
+VD12,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.75,345.5,-23.15
+URXR,Ring interneuron,-7.35,-269.875,48.275
+RIBL,Ring interneuron,5.5,-264.35,38.0
+AVJR,"Neuron, synapses like AVHL/R",-4.75,-264.9,47.55
+LUAL,"Interneuron, short process in post ventral cord",1.35,403.80002,4.1
+VA10,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,254.62502,-21.25
+M4,Pharyngeal motorneuron,-2.033,-288.93298,57.583
+CEPVR,"Cephalic neurons, contain dopamine",-4.95,-277.125,39.925
+DA4,"Ventral cord motor neurons, innervate dorsal muscles",-1.7,-32.4,-61.75
+SMBVL,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",0.425,-263.45,33.05
+AVAR,Ventral cord interneuron,-3.5,-271.5,37.983
+AIZL,Amphid interneuron,5.6000004,-258.75,37.45
+AWCR,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",-8.1,-267.95,38.95
+PVNR,"Interneuron/motor neuron, post. vent. cord, few synapses",-3.25,409.95,8.900001
+ASIR,"Amphid neurons, single ciliated endings",-6.8999996,-263.7,46.875
+URYVL,"Neuron, presynaptic in ring, ending in head",3.4,-280.92502,45.35
+RIML,Ring motor neuron,3.5,-260.9,39.0
+PHAR,"Phasmid neurons, chemosensory",-3.8,402.9,4.1
+PHCL,"Neuron, striated rootlet in male, possibly sensory in tail spike",0.75,408.775,7.275
+ADAL,Ring interneuron,8.65,-239.25,31.05
+SMBVR,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",-4.6,-263.45,33.05
+CEPDR,"Cephalic neurons, contain dopamine",-5.625,-275.02502,54.075005
+PVR,"Interneuron, projects along ventral cord to ring",-1.85,407.35,7.7
+PDB,"Motor neuron, process in dorsal cord, cell body in pre-anal ganglion",-3.3,384.65,-7.75
+RMDR,"Ring motor neuron/interneuron, many synapses",-7.4,-271.0,41.2
+RID,"Ring interneuron, projects along dorsal cord",-1.225,-272.35,54.938
+SDQR,"Ant. lateral interneuron, process projects into ring",-14.200001,-131.75,-10.55
+ASEL,"Amphid neurons, single ciliated endings",4.125,-263.675,40.05
+DD1,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",-0.9,-231.95,6.85
+CANR,"Process runs along excretory canal, no synapses, essential for survival",-27.25,47.95,1.65
+DB7,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",-1.85,267.75,-22.625
+ADLL,Amphid neuron,2.7,-265.75,47.55
+SMDVR,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",-8.900001,-270.95,46.65
+DVB,An excitatory GABAergic motor neuron/interneuron located in dorso-rectal ganglion. Innervates rectal muscles,-0.75,394.5,4.0
+VD10,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.75,236.1,-16.5
+VD4,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",-0.8,-137.2,-52.7
+ASKL,"Amphid neurons, single ciliated endings",3.7,-268.025,46.399998
+RIS,Ring interneuron,-4.8250003,-262.163,33.638
+AINL,Ring interneuron,-1.4499999,-269.542,39.357998
+DB1,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor (aka DB1/3)",-1.9,-230.34999,6.85
+HSNL,"Hermaphrodite specific motor neurons (die in male embryo), innervate vulval muscles, serotonergic",17.45,61.05,6.95
+VB11,"Ventral cord motor neuron, innervates vent. body muscles",-1.8249999,262.325,-21.95
+AIYR,Amphid interneuron,-11.7,-252.50002,28.95
+VA7,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,98.049995,1.175
+URYVR,"Neuron, presynaptic in ring, ending in head",-7.7,-280.92502,45.35
+URBL,"Neuron, presynaptic in ring, ending in head",5.05,-279.95,47.55
+DB4,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",-1.8750001,-96.275,-64.65
+ADLR,Amphid neuron,-6.95,-265.75,47.55
+VB5,"Ventral cord motor neuron, innervates vent. body muscles",-1.85,-109.55,-62.15
+AIYL,Amphid interneuron,7.4500003,-252.50002,28.95
