@@ -10,13 +10,30 @@
 
 import { BrainSim } from './sim.js';
 
+// The bench spins up its OWN sim + redraws every frame, on top of the main viewer. On a big
+// brain (MICrONS/fly, hundreds of k edges) that crawls, so subsample to a fast, well-connected
+// core — still real wiring, just fewer nodes. The worm (302) is untouched.
+const BENCH_CAP = 1500;
+function reduceConnectome(data, cap) {
+  if (data.n_neurons <= cap) return data;
+  const order = [...data.outdeg.keys()].sort((a, b) => data.outdeg[b] - data.outdeg[a]).slice(0, cap);
+  const remap = new Map(); order.forEach((old, i) => remap.set(old, i));
+  const edges = [];
+  for (const [a, bb, w] of data.edges) if (remap.has(a) && remap.has(bb)) edges.push([remap.get(a), remap.get(bb), w]);
+  const pick = (arr) => order.map((i) => arr[i]);
+  const outdeg = new Array(cap).fill(0); for (const e of edges) outdeg[e[0]]++;
+  return { name: data.name, n_neurons: cap, n_synapses: edges.length,
+    ids: pick(data.ids), types: pick(data.types), pos: pick(data.pos),
+    nt: data.nt ? pick(data.nt) : undefined, outdeg, edges };
+}
+
 export class TestBench {
   constructor(canvas, data, channel, onDone, opts = {}) {
     this.c = canvas; this.ctx = canvas.getContext('2d');
-    this.data = data; this.ch = channel; this.onDone = onDone;
+    this.data = reduceConnectome(data, BENCH_CAP); this.ch = channel; this.onDone = onDone;
     this.interactive = !!opts.interactive;   // Scanner mode: aim + pulse on demand, free-running
     this.usPulse = 0; this.pulse = null;      // active pulse envelope for interactive mode
-    this.sim = new BrainSim(data);
+    this.sim = new BrainSim(this.data);
     this.resize();
     this._project();
     this._pickFocus();
@@ -220,7 +237,8 @@ export class TestBench {
     }
 
     // --- SONOGENETICS ULTRASOUND transducer + focusing beam (WRITE) ----------------------
-    const tx = this.focus[0], top = 12;
+    // keep the transducer on-screen even when the focus is near an edge (beam still aims true)
+    const tx = Math.max(72, Math.min(this.w - 210, this.focus[0])), top = 12;
     ctx.strokeStyle = '#2f6fed'; ctx.lineWidth = 3; ctx.beginPath();
     ctx.arc(tx, top - 8, 20, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();  // transducer arc
     if (this.usPulse > 0.01) {
