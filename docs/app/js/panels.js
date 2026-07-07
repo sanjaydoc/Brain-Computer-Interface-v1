@@ -52,6 +52,12 @@ function renderScanner(el) {
         <button class="seg-btn active" data-v="2d">2D bench</button>
         <button class="seg-btn" data-v="3d">3D brain</button>
       </div>
+      <div class="zoom-row" id="sc-zoom">zoom
+        <button class="zoom-btn" id="sc-zin" title="zoom in">＋</button>
+        <button class="zoom-btn" id="sc-zout" title="zoom out">－</button>
+        <button class="zoom-btn" id="sc-zreset" title="reset view">⤢</button>
+        <span class="muted" style="text-transform:none">· or scroll on the tissue</span>
+      </div>
       <label class="field">channel
         <select id="sc-chan"><option value="direct">— direct (no molecule) —</option></select></label>
       <label class="field">effect
@@ -78,6 +84,17 @@ function renderScanner(el) {
     scanBench.aimAt(e.clientX - r.left, e.clientY - r.top);
   });
 
+  // zoom controls (2D bench only — the 3D brain has its own orbit/zoom)
+  el.querySelector('#sc-zin').addEventListener('click', () => scanBench && scanBench.zoomAt(1.25));
+  el.querySelector('#sc-zout').addEventListener('click', () => scanBench && scanBench.zoomAt(1 / 1.25));
+  el.querySelector('#sc-zreset').addEventListener('click', () => scanBench && scanBench.resetView());
+  canvas.addEventListener('wheel', (e) => {
+    if (!scanBench || scView !== '2d') return;
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    scanBench.zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+
   // 2D bench (opaque, covers the 3D brain) ⇄ 3D brain (hide the bench to reveal it)
   let scView = '2d';
   const hint = el.querySelector('#sc-hint');
@@ -86,6 +103,7 @@ function renderScanner(el) {
     scView = btn.dataset.v;
     el.querySelectorAll('#sc-view .seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
     canvas.style.display = scView === '2d' ? '' : 'none';
+    el.querySelector('#sc-zoom').style.display = scView === '2d' ? '' : 'none';
     hint.innerHTML = scView === '2d'
       ? 'Click the tissue to aim the focus. A molecule scales the same pulse by its <b>sensitivity × conductance</b>, so each one lands differently.'
       : 'Now driving the <b>live 3D brain</b> — the pulse stimulates a patch of the real connectome; watch it light up and read out below.';

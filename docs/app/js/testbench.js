@@ -34,6 +34,7 @@ export class TestBench {
     this.interactive = !!opts.interactive;   // Scanner mode: aim + pulse on demand, free-running
     this.usPulse = 0; this.pulse = null;      // active pulse envelope for interactive mode
     this.sim = new BrainSim(this.data);
+    this.zoom = 1; this.panX = 0; this.panY = 0;   // 2D view transform (zoom in/out + pan)
     this.resize();
     this._project();
     this._pickFocus();
@@ -64,37 +65,69 @@ export class TestBench {
     const [axH, axV] = [0, 1, 2].sort((a, b) => spread[b] - spread[a]);
     const mnx = lo[axH], mxx = hi[axH], mny = lo[axV], mxy = hi[axV];
     const mL = 24, mT = 58, mB = 74, mR = 24;
+    // FIT < 1 leaves breathing room so the connectome sits at roughly the same scale as the 3D
+    // view instead of being stretched edge-to-edge (then zoom in/out from there).
+    const FIT = 0.72;
     const sx = (this.w - mL - mR) / ((mxx - mnx) || 1);
     const sy = (this.h - mT - mB) / ((mxy - mny) || 1);
-    const s = Math.min(sx, sy);
+    const s = Math.min(sx, sy) * FIT;
     const ox = mL + ((this.w - mL - mR) - (mxx - mnx) * s) / 2;
     const oy = mT + ((this.h - mT - mB) - (mxy - mny) * s) / 2;
-    this.P = new Array(n);
+    this.P0 = new Array(n);   // base (unzoomed) projection
     let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
     for (let i = 0; i < n; i++) {
       const px = ox + (pos[i][axH] - mnx) * s, py = oy + (pos[i][axV] - mny) * s;
-      this.P[i] = [px, py];
+      this.P0[i] = [px, py];
       bx0 = Math.min(bx0, px); bx1 = Math.max(bx1, px); by0 = Math.min(by0, py); by1 = Math.max(by1, py);
     }
     this.bbox = [bx0, bx1, by0, by1];
+    this._applyView();
   }
+
+  // apply the zoom + pan view transform (about the canvas centre) to the base projection.
+  // Everything downstream (focus, expressing set, motes) is index-based, so only screen
+  // coordinates change — the physics is untouched.
+  _applyView() {
+    const cx = this.w / 2, cy = this.h / 2, z = this.zoom, px = this.panX, py = this.panY;
+    const vx = (x) => cx + (x - cx) * z + px, vy = (y) => cy + (y - cy) * z + py;
+    this.P = this.P0.map(([x, y]) => [vx(x), vy(y)]);
+    if (this.focus0) this.focus = [vx(this.focus0[0]), vy(this.focus0[1])];
+    if (this.dust) for (const mote of this.dust) mote.at = this.P[mote.i];
+  }
+
+  // zoom by `factor` about canvas point (ax,ay) — default the centre (used by the +/− buttons);
+  // the mouse wheel passes the cursor so it zooms toward where you point.
+  zoomAt(factor, ax, ay) {
+    if (ax == null) { ax = this.w / 2; ay = this.h / 2; }
+    const z0 = this.zoom, z = Math.max(0.5, Math.min(9, z0 * factor));
+    if (z === z0) return;
+    const cx = this.w / 2, cy = this.h / 2;
+    const bx = cx + (ax - cx - this.panX) / z0, by = cy + (ay - cy - this.panY) / z0;  // world pt under cursor
+    this.zoom = z;
+    this.panX = ax - cx - (bx - cx) * z;   // keep that world point under the cursor
+    this.panY = ay - cy - (by - cy) * z;
+    this._applyView(); this._draw();
+  }
+  resetView() { this.zoom = 1; this.panX = 0; this.panY = 0; this._applyView(); this._draw(); }
 
   // ultrasound focal spot. Priority: a named worm command population (the dropdown), else the
   // molecule's own EXPRESSION LOCUS derived from its sequence (so different molecules land on
   // different tissue), else the most-connected hub.
   _pickFocus() {
+    const P = this.P0;   // pick in base space; the view transform derives this.focus from focus0
     const roleIdx = this.sim.roleIdx[this.ch.target];
     if (roleIdx && roleIdx.length) {
-      let fx = 0, fy = 0; for (const i of roleIdx) { fx += this.P[i][0]; fy += this.P[i][1]; }
-      this.focus = [fx / roleIdx.length, fy / roleIdx.length];
+      let fx = 0, fy = 0; for (const i of roleIdx) { fx += P[i][0]; fy += P[i][1]; }
+      this.focus0 = [fx / roleIdx.length, fy / roleIdx.length];
     } else if (this.ch.locus) {
       const [x0, x1, y0, y1] = this.bbox;
-      this.focus = [x0 + this.ch.locus[0] * (x1 - x0), y0 + this.ch.locus[1] * (y1 - y0)];
+      this.focus0 = [x0 + this.ch.locus[0] * (x1 - x0), y0 + this.ch.locus[1] * (y1 - y0)];
     } else {
       const deg = this.data.outdeg || [];
-      const idx = deg.length ? deg.indexOf(Math.max(...deg)) : Math.floor(this.P.length / 2);
-      this.focus = this.P[idx].slice();
+      const idx = deg.length ? deg.indexOf(Math.max(...deg)) : Math.floor(P.length / 2);
+      this.focus0 = P[idx].slice();
     }
+    this._applyView();   // sets this.focus in current view space
   }
 
   // neurons the focused ultrasound reaches: nearest ~12% to the focus, Gaussian-weighted by
@@ -117,7 +150,7 @@ export class TestBench {
       // each mote senses its ~1% nearest neighbours
       const d = this.P.map((p, j) => [(p[0] - this.P[i][0]) ** 2 + (p[1] - this.P[i][1]) ** 2, j]);
       d.sort((a, b) => a[0] - b[0]);
-      return { at: this.P[i], sense: d.slice(0, Math.max(3, Math.floor(n * 0.01))).map((x) => x[1]) };
+      return { i, at: this.P[i], sense: d.slice(0, Math.max(3, Math.floor(n * 0.01))).map((x) => x[1]) };
     });
   }
 
@@ -168,8 +201,11 @@ export class TestBench {
     };
     loop();
   }
-  aimAt(px, py) {   // set the ultrasound focus from a canvas click
-    this.focus = [px, py]; this._pickExpressing(); this.exprIdx = this.expr.map((e) => e[0]);
+  aimAt(px, py) {   // set the ultrasound focus from a canvas click (screen coords)
+    this.focus = [px, py];
+    const cx = this.w / 2, cy = this.h / 2;   // store the world-space focus so it stays put on zoom
+    this.focus0 = [cx + (px - cx - this.panX) / this.zoom, cy + (py - cy - this.panY) / this.zoom];
+    this._pickExpressing(); this.exprIdx = this.expr.map((e) => e[0]);
   }
   firePulse(sign, gain) { this.pulse = { t: 0, g: sign * gain }; }   // signed gain
   liveStats() {

@@ -66,6 +66,9 @@ function channelSpec(seq, modality) {
 const chanType = (ch) => ch.sign > 0 ? 'cation · excite' : 'anion · inhibit';
 
 let _data = null, _samples = null, _live = null, _bench = null, _bioView = '2d';
+let _view = { z: 1, x: 0, y: 0 };   // remembered zoom/pan, carried across bench recreation
+const captureView = (b) => { if (b) _view = { z: b.zoom, x: b.panX, y: b.panY }; };
+const applyView = (b) => { if (b) { b.zoom = _view.z; b.panX = _view.x; b.panY = _view.y; b._applyView(); } };
 
 // exposed so the Scanner can load a molecule's channel and use its real sensitivity/conductance
 export { channelSpec, chanType };
@@ -116,6 +119,12 @@ export async function renderBiomolecules(el) {
         <button class="seg-btn active" data-v="2d">2D bench</button>
         <button class="seg-btn" data-v="3d">3D brain</button>
       </div>
+      <div class="zoom-row" id="bio-zoom">zoom
+        <button class="zoom-btn" id="bio-zin" title="zoom in">＋</button>
+        <button class="zoom-btn" id="bio-zout" title="zoom out">－</button>
+        <button class="zoom-btn" id="bio-zreset" title="reset view">⤢</button>
+        <span class="muted" style="text-transform:none">· or scroll</span>
+      </div>
       <label class="field">modality
         <select id="mol-modality"><option>smiles</option><option>protein</option><option>dna</option></select></label>
       <label class="field">focus on
@@ -129,14 +138,27 @@ export async function renderBiomolecules(el) {
 
   // 2D bench (opaque, covers the 3D brain) ⇄ 3D brain (hide the bench to reveal it)
   _bioView = '2d';
+  _view = { z: 1, x: 0, y: 0 };   // fresh view on panel open
   const canvas = el.querySelector('#bench-canvas');
   el.querySelector('#bio-view').addEventListener('click', (e) => {
     const btn = e.target.closest('.seg-btn'); if (!btn) return;
     _bioView = btn.dataset.v;
     el.querySelectorAll('#bio-view .seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
     canvas.style.display = _bioView === '2d' ? '' : 'none';
+    el.querySelector('#bio-zoom').style.display = _bioView === '2d' ? '' : 'none';
     if (_bioView === '2d') idleBench(el);  // restore the idle connectome view
   });
+
+  // zoom controls (2D bench only)
+  el.querySelector('#bio-zin').addEventListener('click', () => _bench && _bench.zoomAt(1.25));
+  el.querySelector('#bio-zout').addEventListener('click', () => _bench && _bench.zoomAt(1 / 1.25));
+  el.querySelector('#bio-zreset').addEventListener('click', () => _bench && _bench.resetView());
+  canvas.addEventListener('wheel', (e) => {
+    if (!_bench || _bioView !== '2d') return;
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    _bench.zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
 
   // show the loaded connectome in the centre straight away (idle), like the Brain template
   idleBench(el);
@@ -154,10 +176,10 @@ function idleBench(el) {
   const data = window.__connectome;
   const canvas = el.querySelector('#bench-canvas');
   if (!data || !canvas) return;
-  if (_bench) _bench.stop();
+  if (_bench) { captureView(_bench); _bench.stop(); }
   _bench = window.__bench = new TestBench(canvas, data,
     { sensitivity: 1, conductance: 1, sign: 1, target: '', locus: [0.5, 0.45] }, null, { interactive: true });
-  requestAnimationFrame(() => { _bench.resize(); _bench.startLive(); });
+  requestAnimationFrame(() => { _bench.resize(); applyView(_bench); _bench.startLive(); });
 }
 
 async function generate(el, live) {
@@ -206,7 +228,7 @@ function runBench(el, data, ch) {
   // 3D-brain view: open the channel on the LIVE 3D sim and read the firing change from it.
   if (_bioView === '3d' && window.__sim) { runBench3d(el, ch, verdict); return; }
 
-  if (_bench) _bench.stop();
+  if (_bench) { captureView(_bench); _bench.stop(); }
   verdict.innerHTML = '<span class="muted">running the BCI loop…</span>';
   const canvas = el.querySelector('#bench-canvas');
 
@@ -221,7 +243,7 @@ function runBench(el, data, ch) {
   const bn = _bench.data.n_neurons;
   if (bn < bn0) el.querySelector('#bench-cx').textContent += ` · ${bn0.toLocaleString()}→${bn.toLocaleString()} sampled`;
   // canvas needs a laid-out size before the bench measures it
-  requestAnimationFrame(() => { _bench.resize(); _bench.start(); });
+  requestAnimationFrame(() => { _bench.resize(); applyView(_bench); _bench.start(); });
 }
 
 // 3D-brain view: open the channel on the LIVE 3D sim (same one the Brain template runs) and

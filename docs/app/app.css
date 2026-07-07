@@ -52,6 +52,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .seg-btn { font-family: var(--sans); font-size: .75rem; font-weight: 600; color: var(--ink-2);
   background: var(--paper); border: 0; padding: .3rem .75rem; cursor: pointer; }
 .seg-btn.active { background: var(--ink); color: #fff; }
+.zoom-row { display: flex; align-items: center; gap: .35rem; font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .5rem; }
+.zoom-btn { font-family: var(--sans); font-weight: 700; font-size: .9rem; line-height: 1; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--hair); border-radius: 7px; padding: .18rem .5rem; cursor: pointer; }
+.zoom-btn:hover { border-color: var(--ink); }
 /* while any tab panel is open, hide the Brain-template's own floating cards behind it */
 .viewer.panelling > .overlay, .viewer.panelling > .legend { display: none; }
 /* floating cards inside a panel reuse .overlay/.stats/.controls; just cap height + scroll */
