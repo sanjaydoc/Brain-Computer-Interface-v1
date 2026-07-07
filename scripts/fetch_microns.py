@@ -2,11 +2,20 @@
 
 Prerequisites (on a machine with internet):
     pip install caveclient
-    # one-time free token from https://api.em.brain.allentech.org/  (CAVE):
-    python -c "from caveclient import CAVEclient; CAVEclient('minnie65_public').auth.setup_token(make_new=True)"
+    # one-time free CAVE token — initialize the GLOBAL client first, then save the token:
+    #   python
+    #   >>> from caveclient import CAVEclient
+    #   >>> c = CAVEclient(server_address="https://global.daf-apis.com")
+    #   >>> c.auth.get_new_token()          # opens a URL; log in, copy the token
+    #   >>> c.auth.save_token(token="...")
+    # then accept the MICrONS public Terms of Service once (in a browser, logged in):
+    #   https://global.daf-apis.com/sticky_auth/api/v1/tos/2/accept
 
 Then:
     python scripts/fetch_microns.py --max-neurons 20000
+
+Table names are discovered at runtime (MICrONS renames them across materialization
+versions), so this keeps working as the public release advances.
 
 Downloads proofread neurons + soma positions + the synapses among them from the
 `minnie65_public` datastack, downsamples to a browser-tractable subset, writes
@@ -28,6 +37,21 @@ OUT = ROOT / "data" / "connectomes" / "microns"
 WEB = ROOT / "docs" / "app" / "data" / "microns.json"
 
 
+def _pick_table(client, *cands):
+    """Return the first candidate table that exists, else the first fuzzy keyword match.
+    MICrONS renames tables across materialization versions, so we discover instead of hardcode."""
+    tables = set(client.materialize.get_tables())
+    for c in cands:
+        if c in tables:
+            return c
+    key = cands[0].split("_")[0]
+    for t in sorted(tables):
+        if key in t:
+            print(f"  (using '{t}' for '{cands[0]}')")
+            return t
+    raise SystemExit(f"none of {cands} found. Available tables:\n  " + "\n  ".join(sorted(tables)))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-neurons", type=int, default=20000)
@@ -42,18 +66,25 @@ def main() -> None:
     client = CAVEclient(args.datastack)
     print(f"connected to {args.datastack} (materialization v{client.materialize.version})")
 
-    # 1) proofread neurons (clean, complete morphologies)
-    pr = client.materialize.query_table("proofreading_status_public_release")
-    root_ids = list(pr["valid_id"].unique())[: args.max_neurons]
-    keep = set(int(r) for r in root_ids)
-    print(f"proofread neurons: {len(pr)}  → keeping {len(keep)}")
+    # 1) proofread neurons — prefer ones with a complete (extended/clean) axon so their
+    #    outgoing connectivity is real. Table renamed across releases → discover it.
+    pr_table = _pick_table(client, "proofreading_status_and_strategy", "proofreading_status_public_release")
+    pr = client.materialize.query_table(pr_table)
+    if "status_axon" in pr.columns:
+        good = pr[pr["status_axon"].astype(str).str.lower().isin(["extended", "clean", "t", "true"])]
+        if len(good) > 100:
+            pr = good
+    id_col = "pt_root_id" if "pt_root_id" in pr.columns else "valid_id"
+    root_ids = [int(r) for r in pr[id_col].dropna().unique() if int(r) != 0][: args.max_neurons]
+    keep = set(root_ids)
+    print(f"proofread neurons in {pr_table}: {len(pr)} → keeping {len(keep)}")
 
-    # 2) soma positions + cell types
-    nuc = client.materialize.query_table("nucleus_detection_v0")
+    # 2) soma positions + cell types (voxel coords are fine; we normalize for the viewer)
+    nuc = client.materialize.query_table(_pick_table(client, "nucleus_detection_v0", "nucleus_detection"))
     nuc = nuc[nuc["pt_root_id"].isin(keep)]
-    vox = client.info.viewer_resolution()  # nm per voxel
-    ct = client.materialize.query_table("aibs_metamodel_celltypes_v661")
-    types = {int(r.pt_root_id): str(getattr(r, "cell_type", "neuron")) for r in ct.itertuples()}
+    ct = client.materialize.query_table(_pick_table(client, "aibs_metamodel_celltypes_v661", "aibs_metamodel_celltypes"))
+    types = {int(r.pt_root_id): str(getattr(r, "cell_type", "neuron"))
+             for r in ct.itertuples() if getattr(r, "pt_root_id", None) is not None}
 
     OUT.mkdir(parents=True, exist_ok=True)
     pos = {}
@@ -61,10 +92,9 @@ def main() -> None:
         w = csv.writer(f); w.writerow(["id", "type", "x", "y", "z"])
         for r in nuc.itertuples():
             rid = int(r.pt_root_id)
-            p = r.pt_position  # in voxels
-            x, y, z = float(p[0]) * vox[0], float(p[1]) * vox[1], float(p[2]) * vox[2]
-            pos[rid] = (x, y, z)
-            w.writerow([rid, types.get(rid, "neuron"), x, y, z])
+            p = r.pt_position  # voxel coords — relative positions are all the viewer needs
+            pos[rid] = (float(p[0]), float(p[1]), float(p[2]))
+            w.writerow([rid, types.get(rid, "neuron"), *pos[rid]])
     print(f"wrote {len(pos)} neurons")
 
     # 3) synapses among the kept set (aggregate contacts → weight)
