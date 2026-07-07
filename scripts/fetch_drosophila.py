@@ -23,12 +23,20 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "connectomes" / "drosophila"
 WEB = ROOT / "docs" / "app" / "data" / "drosophila.json"
+
+
+def _open(path: str):
+    """Open a CSV whether it's plain or gzip-compressed (FlyWire ships .csv.gz)."""
+    if str(path).endswith(".gz"):
+        return gzip.open(path, "rt", newline="", encoding="utf-8")
+    return open(path, newline="", encoding="utf-8")
 
 
 def _col(row: dict, *cands, default=None):
@@ -66,7 +74,7 @@ _TYPE_COLS = ("cell_type", "primary_type", "type", "super_class", "class")
 def _read_rooted(path, want_pos, want_type, pos, types, keep, type_cols=_TYPE_COLS):
     """Scan a FlyWire table keyed by root_id, filling pos/types for the kept neurons.
     `type_cols` sets which label column wins (classification passes super_class first)."""
-    with open(path, newline="") as f:
+    with _open(path) as f:
         for row in csv.DictReader(f):
             rid = str(_col(row, "root_id", "pt_root_id", "bodyid", "id", default="")).strip()
             if not rid or rid not in keep:
@@ -96,7 +104,7 @@ def main() -> None:
 
     # 1) connections → aggregate weights, rank neurons by total connectivity
     weight, deg = {}, {}
-    with open(args.connections, newline="") as f:
+    with _open(args.connections) as f:
         for row in csv.DictReader(f):
             a = str(_col(row, "pre_root_id", "pre_pt_root_id", "bodyid_pre", "source", default="")).strip()
             b = str(_col(row, "post_root_id", "post_pt_root_id", "bodyid_post", "target", default="")).strip()
@@ -125,7 +133,7 @@ def main() -> None:
     # 2b) neurotransmitter → sign (ACh excites; GABA / glutamate inhibit; monoamines modulate)
     nt = {}
     if args.neurotransmitters:
-        with open(args.neurotransmitters, newline="") as f:
+        with _open(args.neurotransmitters) as f:
             for row in csv.DictReader(f):
                 rid = str(_col(row, "root_id", "pt_root_id", "id", default="")).strip()
                 if rid in keep:
