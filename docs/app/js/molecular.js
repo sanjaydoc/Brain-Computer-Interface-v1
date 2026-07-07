@@ -33,6 +33,18 @@ function sensitivity(seq, modality) {
 //               from net residue/heteroatom charge
 //   sensitivity ultrasound coupling (hydrophobic / aromatic-ring content)
 //   conductance pore size proxy from length
+// deterministic expression locus [u,v] in [0,1]² from the sequence — where the channel gets
+// expressed (a targeting proxy), so different molecules land on different parts of the tissue.
+function seqLocus(seq) {
+  let h1 = 2166136261 >>> 0, h2 = 5381 >>> 0;
+  for (let i = 0; i < seq.length; i++) {
+    const c = seq.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+    h2 = ((h2 << 5) + h2 + c) >>> 0;
+  }
+  return [(h1 % 997) / 997, (h2 % 991) / 991];
+}
+
 function channelSpec(seq, modality) {
   const sens = sensitivity(seq, modality);
   const s = seq.toUpperCase();
@@ -48,7 +60,7 @@ function channelSpec(seq, modality) {
     sign = (plus - minus) + (nitro - oxy) * 0.15 >= 0 ? 1 : -1;
     conductance = +(0.5 + 0.5 * Math.min(1, seq.length / 50)).toFixed(2);
   }
-  return { sensitivity: sens, sign, conductance };
+  return { sensitivity: sens, sign, conductance, locus: seqLocus(seq) };
 }
 
 const chanType = (ch) => ch.sign > 0 ? 'cation · excite' : 'anion · inhibit';
