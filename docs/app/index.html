@@ -70,16 +70,25 @@
       <div class="overlay controls">
         <button class="btn" id="run">▶ Run brain</button>
         <div class="eyebrow" style="margin-top:.3rem">write a stimulus</div>
-        <div class="stim-group muted">sensory (acts through the wiring — subtle)</div>
-        <button class="btn act" id="stim-post" title="Stimulates the posterior touch-sensory neurons (PLML / PLMR / PVM). Their signal must propagate through the connectome to the command circuit — a real but weak, diffuse effect. Watch the brain light up; the worm nudges only slightly, because in the real wiring PLM feeds both forward and reverse command neurons (they partly cancel).">Posterior touch (PLM) · sensory</button>
-        <div class="stim-note small" id="plm-note" hidden>
-          Notice PLM connects to <b>both</b> the forward (PVC) and the reverse (AVA/AVD)
-          command neurons — in roughly balanced amounts. Since locomotion = forward − reverse,
-          the two partly cancel, leaving only a small net signal.
+        <div id="worm-stim">
+          <div class="stim-group muted">sensory (acts through the wiring — subtle)</div>
+          <button class="btn act" id="stim-post" title="Stimulates the posterior touch-sensory neurons (PLML / PLMR / PVM). Their signal must propagate through the connectome to the command circuit — a real but weak, diffuse effect. Watch the brain light up; the worm nudges only slightly, because in the real wiring PLM feeds both forward and reverse command neurons (they partly cancel).">Posterior touch (PLM) · sensory</button>
+          <div class="stim-note small" id="plm-note" hidden>
+            Notice PLM connects to <b>both</b> the forward (PVC) and the reverse (AVA/AVD)
+            command neurons — in roughly balanced amounts. Since locomotion = forward − reverse,
+            the two partly cancel, leaving only a small net signal.
+          </div>
+          <div class="stim-group muted">command (drives the output stage — strong)</div>
+          <button class="btn act" id="stim-fwd" title="Directly drives the forward command neurons (AVB / PVC) — the output stage the worm's crawl is decoded from. Strong, immediate forward crawl.">Drive forward cmd (AVB)</button>
+          <button class="btn act" id="stim-rev" title="Directly drives the reverse command neurons (AVA / AVE / AVD). Strong, immediate reversal.">Drive reverse cmd (AVA)</button>
         </div>
-        <div class="stim-group muted">command (drives the output stage — strong)</div>
-        <button class="btn act" id="stim-fwd" title="Directly drives the forward command neurons (AVB / PVC) — the output stage the worm's crawl is decoded from. Strong, immediate forward crawl.">Drive forward cmd (AVB)</button>
-        <button class="btn act" id="stim-rev" title="Directly drives the reverse command neurons (AVA / AVE / AVD). Strong, immediate reversal.">Drive reverse cmd (AVA)</button>
+        <div id="fly-stim" hidden>
+          <div class="stim-group muted">pilot the fly · drives real motor neurons</div>
+          <button class="btn act" id="fly-thrust" title="Stimulates the descending + motor neurons — the fly brain's motor-command output to the wings. Their firing is the flight decode, so the fly accelerates forward.">Beat wings — thrust ↑</button>
+          <button class="btn act" id="fly-left" title="Stimulates the LEFT descending neurons. Left/right descending asymmetry is the turn command, so the fly banks left.">Bank left ↺</button>
+          <button class="btn act" id="fly-right" title="Stimulates the RIGHT descending neurons — the fly banks right.">Bank right ↻</button>
+          <div class="stim-note small">These drive the fly's real <b>descending</b> motor neurons — the same population the flight is decoded from. The fly responds because it's genuinely simulating the connectome, not following a script.</div>
+        </div>
         <div class="muted small">…or click any neuron to stimulate it</div>
         <hr class="divider" />
         <label class="ctl"><input type="checkbox" id="spin" checked /> auto-rotate</label>

@@ -79,6 +79,13 @@ export class BrainSim {
   stimulate(indices, amount = 3.4) { for (const i of indices) if (i !== undefined) this.stim[i] += amount; }
   stimulateRole(role, amount = 3.4) { this.stimulate(this.roleIdx[role] || [], amount); }
 
+  // Fly motor commands: drive the real descending/motor neurons the flight decode reads from.
+  // Smaller per-neuron amount since these populations are large (hundreds of neurons).
+  stimulateFly(role, amount = 1.3) {
+    const map = { thrust: this.descIdx.concat(this.motorIdx), left: this.descLeft, right: this.descRight };
+    this.stimulate(map[role] || [], amount);
+  }
+
   step() {
     const { n, v, refr, fired, act, stim, out, syn, gsyn, tau, vth, noise, bias } = this;
     const gi = this.globalInh * this.pop;
