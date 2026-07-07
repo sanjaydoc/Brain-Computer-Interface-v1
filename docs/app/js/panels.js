@@ -5,22 +5,25 @@
 import { renderBiomolecules, demoChannels, chanType } from './molecular.js';
 import { TestBench } from './testbench.js';
 
-const VENV = `
-  <div class="panel-inner">
-    <div class="eyebrow">Part 4 · Virtual environment</div>
-    <h2>The simulated world</h2>
-    <p style="max-width:64ch">The engine runs one authoritative loop —
-    <b>read (dust) → step → write (sono) → publish</b> — over the living twin. Locomotion is
-    <b>decoded live from the command neurons</b>; the crawling worm in the Brain template is
-    driven by it, with no scripted motion.</p>
-    <div class="pgrid">
-      <div class="card"><div class="label">Neuron model</div><b>LIF</b><p class="muted">→ Hodgkin–Huxley (same interface)</p></div>
-      <div class="card"><div class="label">Stepper</div><b>sparse matvec (CPU)</b><p class="muted">→ GPU / distributed</p></div>
-      <div class="card"><div class="label">Environment</div><b>stimulus_protocol</b><p class="muted">universal · worm→human</p></div>
-    </div>
-    <p class="muted">Open <b>Brain template</b> and press ▶ Run — drive AVB (forward) or AVA
-    (reverse). The behaviour emerges from simulating the connectome.</p>
-  </div>`;
+// Virtual env in stage mode: the live 3D brain shows behind (panel is transparent), the
+// crawling twin is the .venv aside on the right, and a floating card explains the loop —
+// exactly the Brain-template cockpit, focused on the environment.
+function renderVenv(el) {
+  el.classList.add('stage');
+  el.innerHTML = `
+    <div class="overlay stats" style="max-width:320px">
+      <div class="eyebrow">Part 4 · Virtual environment</div>
+      <h3>The simulated world</h3>
+      <p class="muted small" style="margin:.1rem 0 .7rem">One authoritative loop —
+        <b>read (dust) → step → write (sono) → publish</b> — over the living twin. Locomotion is
+        <b>decoded live from the command neurons</b>, with no scripted motion.</p>
+      <div class="statrow"><span>neuron model</span><b>LIF</b></div>
+      <div class="statrow"><span>stepper</span><b>sparse matvec</b></div>
+      <div class="statrow"><span>environment</span><b>stimulus_protocol</b></div>
+      <div class="muted small">The crawling twin on the right → is driven by this loop. Open
+        <b>Brain template</b> and press ▶ Run to drive AVB (forward) or AVA (reverse).</div>
+    </div>`;
+}
 
 const TARGETS = [['rev', 'reverse cmd (AVA)'], ['fwd', 'forward cmd (AVB)'],
   ['touchPost', 'posterior touch (PLM)'], ['touchAnt', 'anterior touch (ALM/AVM)']];
@@ -32,32 +35,27 @@ function stopLive() {
 }
 
 function renderScanner(el) {
-  el.innerHTML = `<div class="panel-inner">
-    <div class="eyebrow">Part 2 · Electronics &amp; hardware</div>
-    <h2>Ultrasound scanner — read &amp; write</h2>
-    <p style="max-width:72ch">The two hardware halves of the BCI, live on the
-    <b>currently-loaded brain</b>. <b>🔊 Sonogenetics</b> writes — aim the focused ultrasound
-    (<b>click the tissue</b>) and deliver a pulse to excite or inhibit the neurons there.
-    <b>🟢 Neural dust</b> reads — motes backscatter the local activity (the trace + the stats
-    below). v1 uses simulated adapters behind the real
-    <code>NeuralInput</code>/<code>NeuralOutput</code> contracts.</p>
-    <div class="sc-controls">
-      <label class="ctl">channel
+  el.classList.add('stage');
+  el.innerHTML = `
+    <canvas id="sc-canvas" class="stage-canvas" style="cursor:crosshair"></canvas>
+    <div class="overlay stats">
+      <div class="eyebrow">Scanner · 🟢 neural dust</div>
+      <h3>Read-out</h3>
+      <div class="statrow"><span>active motes</span><b id="sc-firing">—</b></div>
+      <div class="statrow"><span>mean backscatter</span><b id="sc-mean">—</b></div>
+      <div class="statrow"><span>readout now</span><b id="sc-now">—</b></div>
+      <div class="muted small">Motes backscatter the local activity of the loaded brain — the read half of the BCI.</div>
+    </div>
+    <div class="overlay controls">
+      <div class="eyebrow">🔊 Sonogenetics · write</div>
+      <label class="field">channel
         <select id="sc-chan"><option value="direct">— direct (no molecule) —</option></select></label>
-      <label class="ctl">effect
+      <label class="field">effect
         <select id="sc-sign"><option value="1">excite (cation)</option><option value="-1">inhibit (anion)</option></select></label>
-      <label class="ctl">acoustic pressure <input id="sc-gain" type="range" min="1" max="7" step="0.5" value="5"><span id="sc-gain-v">5</span></label>
+      <label class="ctl">pressure <input id="sc-gain" type="range" min="1" max="7" step="0.5" value="5"><span id="sc-gain-v">5</span></label>
       <button class="btn act" id="sc-pulse">🔊 Deliver ultrasound pulse</button>
-    </div>
-    <div class="muted small" id="sc-chan-note" style="margin:-6px 0 10px">Load a generated molecule to use its real <b>sensitivity × conductance</b> — the same pressure then produces a different effect per molecule. Or drive the ultrasound directly.</div>
-    <canvas id="sc-canvas" class="bench-canvas" style="cursor:crosshair"></canvas>
-    <div class="pgrid" style="margin-top:12px">
-      <div class="card"><div class="label">active motes</div><b id="sc-firing">—</b><p class="muted">neural-dust backscatter</p></div>
-      <div class="card"><div class="label">mean backscatter</div><b id="sc-mean">—</b><p class="muted">population read-out</p></div>
-      <div class="card"><div class="label">readout now</div><b id="sc-now">—</b><p class="muted">at the recording sites</p></div>
-    </div>
-    <div class="muted small">Click anywhere on the tissue to move the ultrasound focus; the effect propagates through the <b>real connectome</b>.</div>
-  </div>`;
+      <div class="muted small">Click the tissue to aim the focus. A molecule scales the same pulse by its <b>sensitivity × conductance</b>, so each one lands differently.</div>
+    </div>`;
 
   const data = window.__connectome;
   const canvas = el.querySelector('#sc-canvas');
@@ -161,15 +159,21 @@ const panel = document.getElementById('panel');
 const tabs = [...document.querySelectorAll('.tab')];
 let activeKey = null;
 
+const viewer = document.getElementById('viewer');
+
 function renderPanel(key) {
   activeKey = key;
   stopLive();
-  if (key === 'brain') { panel.hidden = true; panel.innerHTML = ''; return; }
+  panel.classList.remove('stage');          // System uses document mode; the rest re-add it
+  if (key === 'brain') {
+    panel.hidden = true; panel.innerHTML = ''; viewer.classList.remove('panelling'); return;
+  }
   panel.hidden = false;
+  viewer.classList.add('panelling');         // hide the Brain-template's own floating cards
   if (key === 'biomolecules') renderBiomolecules(panel);
   else if (key === 'scanner') renderScanner(panel);
   else if (key === 'system') renderSystem(panel);
-  else panel.innerHTML = VENV;
+  else renderVenv(panel);
 }
 
 tabs.forEach((t) => t.addEventListener('click', () => {
@@ -181,5 +185,7 @@ tabs.forEach((t) => t.addEventListener('click', () => {
 // Scanner rebuilds its bench on the new brain; System re-reads window.__sim on its next tick;
 // Biomolecules keeps its generated channels (Test already uses the current brain).
 window.addEventListener('connectome-changed', () => {
-  if (!panel.hidden && activeKey === 'scanner') { stopLive(); renderScanner(panel); }
+  if (panel.hidden) return;
+  if (activeKey === 'scanner') { stopLive(); renderScanner(panel); }
+  else if (activeKey === 'biomolecules') renderBiomolecules(panel);
 });

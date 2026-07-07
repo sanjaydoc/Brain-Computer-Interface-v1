@@ -100,49 +100,49 @@ export async function renderBiomolecules(el) {
   const badge = live
     ? `<span class="chip allow">live · ${live.local ? 'local GPU' : 'NVIDIA NIM'}</span>`
     : `<span class="chip">demo · bundled samples</span>`;
-  el.innerHTML = `<div class="panel-inner">
-    <div class="eyebrow">Part 1 · Molecular engineering</div>
-    <h2>Generate biomolecules → test on the connectome ${badge}</h2>
-    <p style="max-width:70ch">De-novo channels from <a href="https://github.com/sanjaydoc/De-Novo-LLM">De-Novo-LLM</a>.
-    Each molecule's <b>sequence sets a channel</b> — cation (excitatory) or anion (inhibitory),
-    an ultrasound sensitivity, and a conductance (a transparent composition proxy, <i>not</i> a
-    validated predictor). Press <b>Test</b> and the loop runs on the <b>currently-loaded brain</b>:
-    ultrasound writes → the real connectome responds → neural dust reads.</p>
-    <div class="mol-controls">
-      <label>modality
-        <select id="mol-modality"><option>smiles</option><option>protein</option><option>dna</option></select></label>
-      <label>focus on
-        <select id="mol-target">${TARGETS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
-      <label>count <input id="mol-n" type="number" value="6" min="1" max="20" style="width:4rem"></label>
-      <button class="btn" id="mol-gen">▶ Generate</button>
+  el.classList.add('stage');
+  el.innerHTML = `
+    <canvas id="bench-canvas" class="stage-canvas"></canvas>
+    <div class="overlay stats">
+      <div class="eyebrow">Biomolecules · test bench</div>
+      <h3 id="bench-ch">—</h3>
+      <div id="bench-cx" class="muted small"></div>
+      <div id="bench-verdict" class="small" style="margin-top:.45rem">Generate a channel, then press <b>Test ▶</b> — the loop runs on the loaded brain.</div>
+      <div class="muted small" style="margin-top:.55rem"><b>🔊</b> ultrasound writes → the real connectome responds → <b>🟢</b> neural dust reads (trace, bottom).</div>
     </div>
-    <table id="mol-table"><thead><tr><th>channel</th><th>sequence</th><th>type</th><th>sens</th><th>g</th><th>test</th></tr></thead>
-      <tbody><tr><td colspan="6" class="muted">Press Generate to design candidate channels.</td></tr></tbody></table>
-
-    <section id="mol-bench" hidden>
-      <div class="bench-head">
-        <b>Test bench</b> · <span id="bench-cx" class="muted"></span> · channel <b id="bench-ch">—</b>
-        <span id="bench-verdict"></span>
-      </div>
-      <canvas id="bench-canvas" class="bench-canvas"></canvas>
-      <div class="muted small" style="margin-top:.4rem">
-        <b>🔊 Sonogenetics ultrasound</b> (write): the beam focuses on a spot and opens the channel there.
-        The <b>real connectome</b> responds and the activity propagates.
-        <b>🟢 Neural dust</b> (read): motes record the evoked response (trace, bottom).
-        This is the full BCI loop — <b>sequence → neural effect</b> — on the brain you have loaded.
-      </div>
-    </section>
-  </div>`;
+    <div class="overlay controls">
+      <div class="eyebrow">Part 1 · De-novo channels ${badge}</div>
+      <label class="field">modality
+        <select id="mol-modality"><option>smiles</option><option>protein</option><option>dna</option></select></label>
+      <label class="field">focus on
+        <select id="mol-target">${TARGETS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
+      <label class="field">count <input id="mol-n" type="number" value="6" min="1" max="20"></label>
+      <button class="btn" id="mol-gen">▶ Generate</button>
+      <div id="mol-list" class="panel-card-list"><div class="muted small">Each molecule's sequence sets a channel — cation (excite) or anion (inhibit). Press Generate to design candidates.</div></div>
+    </div>`;
 
   el.querySelector('#mol-gen').addEventListener('click', () => generate(el, live));
+  // show the loaded connectome in the centre straight away (idle), like the Brain template
+  idleBench(el);
+}
+
+// central canvas shows the current brain idling until a molecule is tested
+function idleBench(el) {
+  const data = window.__connectome;
+  const canvas = el.querySelector('#bench-canvas');
+  if (!data || !canvas) return;
+  if (_bench) _bench.stop();
+  _bench = window.__bench = new TestBench(canvas, data,
+    { sensitivity: 1, conductance: 1, sign: 1, target: '', locus: [0.5, 0.45] }, null, { interactive: true });
+  requestAnimationFrame(() => { _bench.resize(); _bench.startLive(); });
 }
 
 async function generate(el, live) {
   const modality = el.querySelector('#mol-modality').value;
   const target = el.querySelector('#mol-target').value;
   const n = Math.max(1, Math.min(20, +el.querySelector('#mol-n').value || 6));
-  const tbody = el.querySelector('#mol-table tbody');
-  tbody.innerHTML = `<tr><td colspan="6" class="muted">Generating…</td></tr>`;
+  const list = el.querySelector('#mol-list');
+  list.innerHTML = `<div class="muted small">Generating…</div>`;
 
   let channels;
   if (live) {
@@ -160,16 +160,15 @@ async function generate(el, live) {
     });
   }
 
-  tbody.innerHTML = channels.map((ch, i) => `<tr data-i="${i}">
-    <td><b>${ch.id}</b></td>
-    <td class="mono" style="font-size:.76rem;max-width:20ch;overflow:hidden;text-overflow:ellipsis">${ch.sequence}</td>
-    <td><span class="chip ${ch.sign > 0 ? 'ok' : 'no'}">${chanType(ch)}</span></td>
-    <td>${ch.sensitivity.toFixed(2)}</td>
-    <td>${ch.conductance.toFixed(2)}</td>
-    <td><button class="btn act mol-test" data-i="${i}">Test ▶</button></td>
-  </tr>`).join('');
+  list.innerHTML = channels.map((ch, i) => `<div class="mol-row" data-i="${i}"
+      title="${ch.sequence} · sens ${ch.sensitivity.toFixed(2)} · g ${ch.conductance.toFixed(2)}">
+    <b>${ch.id}</b>
+    <span class="chip ${ch.sign > 0 ? 'ok' : 'no'}">${chanType(ch)}</span>
+    <span class="mono">${ch.sequence}</span>
+    <button class="btn act mol-test" data-i="${i}">Test ▶</button>
+  </div>`).join('');
 
-  tbody.querySelectorAll('.mol-test').forEach((btn) => btn.addEventListener('click', async () => {
+  list.querySelectorAll('.mol-test').forEach((btn) => btn.addEventListener('click', async () => {
     // always test on the CURRENTLY-loaded brain, even if you switched connectome after generating
     runBench(el, window.__connectome || await connectomeData(), channels[+btn.dataset.i]);
   }));
@@ -177,25 +176,23 @@ async function generate(el, live) {
 
 function runBench(el, data, ch) {
   if (_bench) _bench.stop();
-  const bench = el.querySelector('#mol-bench');
-  bench.hidden = false;
-  el.querySelector('#bench-ch').textContent = `${ch.id} (${chanType(ch)}, sens ${ch.sensitivity.toFixed(2)}, g ${ch.conductance.toFixed(2)})`;
+  el.querySelector('#bench-ch').textContent = `${ch.id} · ${chanType(ch)}`;
+  const bn0 = data.n_neurons;
+  el.querySelector('#bench-cx').textContent = `${data.name || 'connectome'} · sens ${ch.sensitivity.toFixed(2)} · g ${ch.conductance.toFixed(2)}`;
   const verdict = el.querySelector('#bench-verdict');
-  verdict.innerHTML = ' · <span class="muted">running…</span>';
+  verdict.innerHTML = '<span class="muted">running the BCI loop…</span>';
   const canvas = el.querySelector('#bench-canvas');
-  bench.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   _bench = window.__bench = new TestBench(canvas, data, ch, (r) => {
     const cls = r.direction === 'excited' ? 'ok' : (r.direction === 'suppressed' ? 'no' : 'muted');
     const verb = r.direction === 'excited' ? 'drove firing in the targeted neurons'
       : r.direction === 'suppressed' ? 'silenced the targeted neurons' : 'had little net effect';
-    verdict.innerHTML = ` · <b class="chip ${cls}">${r.direction}</b> `
+    verdict.innerHTML = `<b class="chip ${cls}">${r.direction}</b> `
       + `<span class="muted small">${verb} · score ${r.score}</span>`;
   });
   // header reflects the bench's actual working set (large brains are subsampled for speed)
-  const bn = _bench.data.n_neurons, orig = data.n_neurons;
-  el.querySelector('#bench-cx').textContent = `${data.name || 'connectome'} · `
-    + (bn < orig ? `${orig.toLocaleString()} → ${bn.toLocaleString()} sampled` : `${orig.toLocaleString()} neurons`);
+  const bn = _bench.data.n_neurons;
+  if (bn < bn0) el.querySelector('#bench-cx').textContent += ` · ${bn0.toLocaleString()}→${bn.toLocaleString()} sampled`;
   // canvas needs a laid-out size before the bench measures it
   requestAnimationFrame(() => { _bench.resize(); _bench.start(); });
 }

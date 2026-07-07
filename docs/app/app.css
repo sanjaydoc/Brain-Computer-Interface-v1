@@ -29,14 +29,36 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
 .stage { flex: 1; display: flex; min-height: 0; position: relative; }
 
-/* Non-brain tabs render as a frosted cockpit layer over the live 3D viewer — the
-   connectome keeps rendering behind, and the living avatar aside (.venv) stays visible,
-   so every tab feels like the Brain-template view rather than a flat white page. */
+/* System = a frosted document layer over the live 3D viewer (the connectome keeps
+   rendering behind, and the living avatar aside stays visible). */
 .panel-overlay { position: absolute; inset: 0; z-index: 10; overflow: auto;
   background: rgba(250,250,251,.90); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 :root[data-theme="dark"] .panel-overlay { background: rgba(18,18,20,.88); }
 .panel-inner { max-width: 880px; margin: 0 auto; padding: 30px 30px 64px; }
 .panel-inner > .eyebrow:first-child { color: var(--venv); }
+
+/* Stage-mode tabs (Biomolecules / Scanner / Virtual env) mirror the Brain-template layout
+   EXACTLY: a full-bleed central visualization framed by floating overlay cards, with the
+   living avatar aside still beside it — not a document panel. */
+.panel-overlay.stage { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: hidden; }
+.stage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* while any tab panel is open, hide the Brain-template's own floating cards behind it */
+.viewer.panelling > .overlay, .viewer.panelling > .legend { display: none; }
+/* floating cards inside a panel reuse .overlay/.stats/.controls; just cap height + scroll */
+.panel-overlay .overlay { max-height: calc(100% - 36px); overflow: auto; }
+.panel-overlay .overlay .field { display: flex; flex-direction: column; gap: .28rem;
+  font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: .45rem 0; }
+.panel-overlay .overlay .field select,
+.panel-overlay .overlay .field input[type=number] {
+  font-family: var(--sans); font-size: .85rem; padding: .34rem .45rem; text-transform: none; letter-spacing: 0;
+  border: 1px solid var(--hair); border-radius: 8px; background: var(--paper); color: var(--ink); }
+.panel-card-list { margin-top: .55rem; max-height: 42vh; overflow: auto; display: flex; flex-direction: column; gap: .32rem; }
+.mol-row { display: flex; align-items: center; gap: .55rem; font-size: .74rem;
+  padding: .3rem .2rem .3rem .45rem; border: 1px solid var(--hair); border-radius: 8px; }
+.mol-row .mono { flex: 1; font-size: .68rem; max-width: 11ch; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.mol-row .btn { padding: .2rem .5rem; font-size: .72rem; }
+.mol-row .chip { padding: .06rem .34rem; font-size: .62rem; }
 .panel-inner h2 { font-family: var(--serif); font-weight: 500; font-size: 2rem; margin: .2rem 0 1rem; }
 .panel-inner table { margin-top: 16px; }
 .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 18px 0; }
@@ -155,7 +177,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   .overlay { position: static; max-width: none; margin: 10px 12px 0;
     box-shadow: none; backdrop-filter: none; background: var(--paper); inset: auto; }
   .controls { order: 0; top: auto; right: auto; }   /* Run + stimulus buttons — top */
-  .viewer canvas { position: static; inset: auto; order: 1;
+  .viewer > canvas { position: static; inset: auto; order: 1;
     width: 100%; height: 320px; background:
     radial-gradient(120% 120% at 50% 20%, #ffffff 0%, #f3f3f5 100%); }
   .loading { position: static; order: 1; height: 120px; }
@@ -163,4 +185,10 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   .inspector { order: 3; bottom: auto; left: auto; }
   .legend { position: static; order: 4; align-self: flex-start; margin: 8px 12px 12px;
     bottom: auto; right: auto; }
+
+  /* stage-mode panels stack in normal flow too: central canvas, then the floating cards */
+  .panel-overlay.stage { position: absolute; inset: 0; overflow: auto; display: block; }
+  .stage-canvas { position: static; inset: auto; width: auto; height: 300px; margin: 10px 12px 0; }
+  .panel-overlay .overlay { max-height: none; margin: 10px 12px 0; }
+  .panel-card-list { max-height: none; }
 }
