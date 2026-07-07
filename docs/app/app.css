@@ -57,6 +57,24 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .zoom-btn { font-family: var(--sans); font-weight: 700; font-size: .9rem; line-height: 1; color: var(--ink);
   background: var(--paper); border: 1px solid var(--hair); border-radius: 7px; padding: .18rem .5rem; cursor: pointer; }
 .zoom-btn:hover { border-color: var(--ink); }
+
+/* roadmap scaffold cards (Physics / Waves / Electronics / Hardware / Fusion / 3D print) */
+.overlay.scaffold { top: 18px; left: 18px; max-width: 440px; }
+.pipe { list-style: none; margin: .6rem 0 0; padding: 0; }
+.pipe li { display: flex; gap: .55rem; align-items: flex-start; padding: .4rem 0; border-bottom: 1px solid var(--hair); }
+.pipe li:last-child { border-bottom: 0; }
+.pipe .n { font-weight: 800; color: var(--venv); min-width: 1.3em; text-align: center; }
+.pipe b { font-size: .82rem; }
+.pipe .d { color: var(--muted); font-size: .74rem; line-height: 1.35; }
+.tag-soon { display: inline-block; font-size: .62rem; text-transform: uppercase; letter-spacing: .05em;
+  padding: .14rem .5rem; border: 1px solid var(--hair); border-radius: var(--pill); color: var(--muted); }
+.scaffold-out { margin-top: .55rem; }
+table.mini { width: 100%; border-collapse: collapse; margin: .35rem 0; font-size: .76rem; }
+table.mini th { text-align: left; color: var(--muted); font-weight: 600; font-size: .68rem;
+  text-transform: uppercase; letter-spacing: .04em; padding: .2rem .3rem; border-bottom: 1px solid var(--hair); }
+table.mini td { padding: .2rem .3rem; border-bottom: 1px solid var(--hair); vertical-align: middle; }
+table.mini tr:last-child td { border-bottom: 0; }
+table.mini .chip { padding: .04rem .34rem; font-size: .62rem; }
 /* while any tab panel is open, hide the Brain-template's own floating cards behind it */
 .viewer.panelling > .overlay, .viewer.panelling > .legend { display: none; }
 /* floating cards inside a panel reuse .overlay/.stats/.controls; just cap height + scroll */

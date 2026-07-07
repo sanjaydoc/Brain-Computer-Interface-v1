@@ -209,6 +209,135 @@ function renderSystem(el) {
   }, 150);
 }
 
+// ---- roadmap scaffolds -------------------------------------------------------
+// Cockpit-view panels (floating card over the live 3D brain) that lay out each stage's
+// pipeline, with real demo actions where trivial. Each gets deepened into a full tool later.
+const SCAFFOLDS = {
+  physics: {
+    eyebrow: 'Part · Physics', title: 'Molecular & wave interaction physics',
+    intro: 'The model behind Biomolecules & Scanner — how a sequence becomes a neural effect, and how waves couple into the tissue.',
+    pipe: [
+      ['Sequence → channel', 'charge → cation (excite) / anion (inhibit); length → conductance; hydrophobicity → ultrasound sensitivity'],
+      ['Channel → membrane', 'the open channel injects current at the expressing neurons (LIF): excitation depolarizes, inhibition hyperpolarizes'],
+      ['Synapse propagation', 'input-normalized weights × the E/I sign carry the effect through the real connectome'],
+      ['Wave coupling', 'focused ultrasound opens the channel only at the focal spot; pressure × sensitivity × conductance sets the drive'],
+      ['Read-out', 'neural-dust motes backscatter local activity — the measured effect'],
+    ], status: 'live in Biomolecules & Scanner · dedicated view next',
+  },
+  waves: {
+    eyebrow: 'Part · Waves', title: 'Wave design & targeting',
+    intro: 'Experiment with different waves to target neurons, combine waves to cover blind spots, and invent new waveforms.',
+    pipe: [
+      ['Waveforms', 'pulse · continuous · burst · frequency sweep (chirp) — each has a different focal size and depth'],
+      ['Targeting', 'aim the focus; frequency sets the focal spot / penetration, pressure sets the drive'],
+      ['Waves × biomolecules', 'the loaded channel scales every wave by its sensitivity × conductance'],
+      ['Combine to cover blind spots', 'sum multiple foci / waveforms so neurons missed by one wave are reached by another'],
+      ['Invent new waves', 'borrow the generator from inventor-studio-v3 to synthesize novel waveforms'],
+    ], status: 'ultrasound live in Scanner · multi-wave bench next',
+  },
+  electronics: {
+    eyebrow: 'Part · Electronics', title: 'Schematic & PCB generation',
+    intro: 'Generate the read/write electronics — bio-AFE, stimulator, MCU — as a schematic and PCB, ported from inventor-studio-v3 (Node → Python).',
+    pipe: [
+      ['Concept → schematic', 'an LLM emits components + connections (inventor-studio-v3 pipeline)'],
+      ['Sanitize', 'drop broken / duplicate nets, normalize component IDs'],
+      ['BOM', 'bill of materials with part references'],
+      ['PCB layout', 'place & route onto a board outline'],
+    ],
+    action: '<button class="btn act" id="el-gen" style="margin-top:.5rem">Generate sample schematic</button><div class="scaffold-out" id="el-out"></div>',
+    status: 'Node → Python port pending', wire: wireElectronics,
+  },
+  hardware: {
+    eyebrow: 'Part · Hardware', title: 'Enclosure & sensor casing',
+    intro: 'Parametric CAD to house the electronics and the sensors (ultrasound transducer, neural-dust array).',
+    pipe: [
+      ['Board dims → enclosure', 'derive a case from the PCB outline + connector cutouts'],
+      ['Sensor casing', 'mounts for the transducer & dust array, with an acoustic window'],
+      ['Parametric CAD', 'JSCAD / OpenSCAD model → mesh'],
+      ['Export mesh', 'STL / 3MF, ready for printing'],
+    ], status: 'CAD generator next',
+  },
+  print: {
+    eyebrow: 'Part · 3D printing', title: 'Prototype → printer',
+    intro: 'Take the enclosure mesh from the Fusion results table, export a print file, and send it to the printer.',
+    pipe: [
+      ['Get file', 'pull the enclosure STL referenced in the Fusion table'],
+      ['Slice', 'export print-ready geometry'],
+      ['Send', 'stream to the 3D printer (OctoPrint / USB)'],
+    ],
+    action: '<button class="btn act" id="pr-stl" style="margin-top:.5rem">Export sample enclosure .stl</button><div class="scaffold-out muted small" id="pr-out"></div>',
+    status: 'printer link next', wire: wirePrint,
+  },
+};
+
+function renderScaffold(el, key) {
+  const c = SCAFFOLDS[key];
+  el.classList.add('stage');
+  el.innerHTML = `<div class="overlay stats scaffold">
+    <div class="eyebrow">${c.eyebrow}</div>
+    <h3>${c.title}</h3>
+    <p class="muted small">${c.intro}</p>
+    <ol class="pipe">${c.pipe.map(([t, d], i) =>
+      `<li><span class="n">${i + 1}</span><span><b>${t}</b><br><span class="d">${d}</span></span></li>`).join('')}</ol>
+    ${c.action || ''}
+    <div style="margin-top:.7rem"><span class="tag-soon">${c.status}</span></div>
+  </div>`;
+  if (c.wire) c.wire(el);
+}
+
+function wireElectronics(el) {
+  el.querySelector('#el-gen').addEventListener('click', () => {
+    const comps = [['U1', 'MCU', 'ESP32-S3'], ['U2', 'Bio-AFE', 'ADS1299 (8-ch)'], ['U3', 'Stimulator', 'constant-current'],
+      ['U4', 'US driver', 'MOSFET H-bridge'], ['J1', 'Electrodes', '8-ch header'], ['PM1', 'PMIC + batt', 'Li-Po 3.7V']];
+    const nets = ['J1→U2 (electrodes)', 'U2→U1 (SPI)', 'U1→U3 (stim ctrl)', 'U1→U4 (US ctrl)', 'PM1→all (power)'];
+    el.querySelector('#el-out').innerHTML = `<b class="small">Sample BCI front-end</b>
+      <table class="mini"><tbody>${comps.map((c) => `<tr><td><b>${c[0]}</b></td><td>${c[1]}</td><td class="muted">${c[2]}</td></tr>`).join('')}</tbody></table>
+      <div class="muted small" style="margin-top:.3rem">nets: ${nets.join(' · ')}</div>
+      <div class="muted small">demo shape from inventor-studio-v3's Circuit model — live LLM generation lands after the Python port.</div>`;
+  });
+}
+
+function boxSTL(name, X, Y, Z) {   // ASCII STL of an axis-aligned box (a stand-in enclosure)
+  const hx = X / 2, hy = Y / 2, hz = Z / 2;
+  const v = [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, hy, -hz], [-hx, hy, -hz], [-hx, -hy, hz], [hx, -hy, hz], [hx, hy, hz], [-hx, hy, hz]];
+  const faces = [[0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6], [0, 4, 5], [0, 5, 1], [1, 5, 6], [1, 6, 2], [2, 6, 7], [2, 7, 3], [3, 7, 4], [3, 4, 0]];
+  let s = `solid ${name}\n`;
+  for (const f of faces) {
+    s += ' facet normal 0 0 0\n  outer loop\n';
+    for (const i of f) s += `   vertex ${v[i][0]} ${v[i][1]} ${v[i][2]}\n`;
+    s += '  endloop\n endfacet\n';
+  }
+  return s + `endsolid ${name}\n`;
+}
+function wirePrint(el) {
+  el.querySelector('#pr-stl').addEventListener('click', () => {
+    const stl = boxSTL('bci_enclosure', 60, 40, 18);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([stl], { type: 'model/stl' }));
+    a.download = 'bci_enclosure.stl'; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+    el.querySelector('#pr-out').textContent = 'Exported bci_enclosure.stl (60 × 40 × 18 mm box) — a real print file; the parametric enclosure lands with the Hardware CAD generator.';
+  });
+}
+
+function renderFusion(el) {
+  el.classList.add('stage');
+  const cx = (window.__connectome && window.__connectome.name) || '—';
+  const rows = [
+    ['Connectome', cx, 'loaded'], ['Molecule / channel', 'generate in Biomolecules', 'pending'],
+    ['Wave', 'focused ultrasound (Scanner)', 'live'], ['Electronics', 'sample schematic', 'demo'],
+    ['Hardware', 'enclosure params', 'pending'], ['Print file', 'bci_enclosure.stl', 'export ready'],
+  ];
+  const ok = (s) => ['loaded', 'live', 'export ready'].includes(s) ? 'ok' : '';
+  el.innerHTML = `<div class="overlay stats scaffold" style="max-width:470px">
+    <div class="eyebrow">Part · Fusion</div><h3>Combine everything · one view</h3>
+    <p class="muted small">Assemble the whole stack over the connectome, run an experiment, and log each result.</p>
+    <table class="mini"><thead><tr><th>stage</th><th>artifact</th><th>status</th></tr></thead>
+    <tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td class="muted">${r[1]}</td><td><span class="chip ${ok(r[2])}">${r[2]}</span></td></tr>`).join('')}</tbody></table>
+    <div style="margin-top:.7rem"><span class="tag-soon">experiment runner + CSV results export next</span></div>
+  </div>`;
+}
+
 const panel = document.getElementById('panel');
 const tabs = [...document.querySelectorAll('.tab')];
 let activeKey = null;
@@ -227,6 +356,9 @@ function renderPanel(key) {
   if (key === 'biomolecules') renderBiomolecules(panel);
   else if (key === 'scanner') renderScanner(panel);
   else if (key === 'system') renderSystem(panel);
+  else if (key === 'venv') renderVenv(panel);
+  else if (key === 'fusion') renderFusion(panel);
+  else if (SCAFFOLDS[key]) renderScaffold(panel, key);
   else renderVenv(panel);
 }
 
