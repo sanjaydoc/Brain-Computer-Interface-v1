@@ -229,6 +229,8 @@ function build(d) {
   resize(); requestAnimationFrame(resize);
   toggleRun(true);   // the brain is spontaneously active from the start
   if (!started) { started = true; animate(); }
+  // let any open control-plane panel (Biomolecules / Scanner) retarget the new brain
+  window.dispatchEvent(new CustomEvent('connectome-changed'));
 }
 
 const col = new THREE.Color();
@@ -411,8 +413,9 @@ sizeSelect();
 if (cxSel) cxSel.addEventListener('change', (e) => {
   sizeSelect();
   loadConnectome(e.target.value);
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'brain'));
-  const p = $('panel'); if (p) { p.hidden = true; p.innerHTML = ''; }
+  // Stay on whatever tab is open. If a panel (Biomolecules / Scanner / …) is showing, it
+  // retargets the new brain via the 'connectome-changed' event (see build()); only the
+  // Brain-template view needs the 3D twin rebuilt, which loadConnectome already does.
 });
 
 resize();

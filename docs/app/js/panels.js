@@ -133,14 +133,27 @@ function renderSystem(el) {
 
 const panel = document.getElementById('panel');
 const tabs = [...document.querySelectorAll('.tab')];
-tabs.forEach((t) => t.addEventListener('click', () => {
-  tabs.forEach((x) => x.classList.toggle('active', x === t));
+let activeKey = null;
+
+function renderPanel(key) {
+  activeKey = key;
   stopLive();
-  const key = t.dataset.tab;
   if (key === 'brain') { panel.hidden = true; panel.innerHTML = ''; return; }
   panel.hidden = false;
   if (key === 'biomolecules') renderBiomolecules(panel);
   else if (key === 'scanner') renderScanner(panel);
   else if (key === 'system') renderSystem(panel);
   else panel.innerHTML = VENV;
+}
+
+tabs.forEach((t) => t.addEventListener('click', () => {
+  tabs.forEach((x) => x.classList.toggle('active', x === t));
+  renderPanel(t.dataset.tab);
 }));
+
+// When the connectome changes while a panel is open, retarget it instead of losing the view.
+// Scanner rebuilds its bench on the new brain; System re-reads window.__sim on its next tick;
+// Biomolecules keeps its generated channels (Test already uses the current brain).
+window.addEventListener('connectome-changed', () => {
+  if (!panel.hidden && activeKey === 'scanner') { stopLive(); renderScanner(panel); }
+});
