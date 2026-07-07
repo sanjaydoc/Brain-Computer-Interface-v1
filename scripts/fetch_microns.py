@@ -97,18 +97,39 @@ def main() -> None:
             w.writerow([rid, types.get(rid, "neuron"), *pos[rid]])
     print(f"wrote {len(pos)} neurons")
 
-    # 3) synapses among the kept set (aggregate contacts → weight)
-    syn = client.materialize.synapse_query(pre_ids=list(keep), post_ids=list(keep))
+    # 3) synapses among the kept set. Querying pre_ids AND post_ids together builds a giant
+    #    double-IN SQL clause that crashes the server, so query outgoing synapses in small
+    #    presynaptic batches and filter the postsynaptic side to the kept set locally.
+    import time
+
+    kept_ids = [rid for rid in keep if rid in pos]
     agg = {}
-    for r in syn.itertuples():
-        a, b = int(r.pre_pt_root_id), int(r.post_pt_root_id)
-        if a in pos and b in pos and a != b:
-            agg[(a, b)] = agg.get((a, b), 0) + 1
+    BATCH = 50
+    for start in range(0, len(kept_ids), BATCH):
+        batch = kept_ids[start:start + BATCH]
+        syn = None
+        for attempt in range(4):
+            try:
+                syn = client.materialize.synapse_query(pre_ids=batch)
+                break
+            except Exception as ex:
+                if attempt == 3:
+                    print(f"  batch @{start} failed, skipping: {str(ex)[:80]}")
+                else:
+                    time.sleep(2 * (attempt + 1))
+        if syn is None:
+            continue
+        for r in syn.itertuples():
+            a, b = int(r.pre_pt_root_id), int(r.post_pt_root_id)
+            if a in pos and b in pos and a != b:
+                agg[(a, b)] = agg.get((a, b), 0) + 1
+        print(f"  synapses: {min(start + BATCH, len(kept_ids))}/{len(kept_ids)} neurons scanned, {len(agg):,} connections")
+
     with open(OUT / "synapses.csv", "w", newline="") as f:
         w = csv.writer(f); w.writerow(["pre", "post", "kind", "weight"])
         for (a, b), c in agg.items():
             w.writerow([a, b, "chemical", c])
-    print(f"wrote {len(agg)} synaptic connections")
+    print(f"wrote {len(agg):,} synaptic connections")
 
     _export_web(pos, agg, types)
 
