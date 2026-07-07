@@ -4,6 +4,7 @@
 export const WB = {
   channel: null,     // { id, sequence, sign, sensitivity, conductance }
   wave: null,        // { form, freq, pressure, sign }
+  waves: [],         // invented waves: { name, modes:[id], amplitude, sign, coverage }
   circuit: null,     // { title, components, connections, bom }
   enclosure: null,   // { kind, w, h, d, wall, stl, name }
   results: [],       // Fusion experiment rows

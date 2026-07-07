@@ -14,7 +14,7 @@ const C_EM = 3e8, C_SND = 1540, C_AIR = 340;
 // modality → (band, frequency, wave speed, tissue reach, coverage fraction, colour). The reach
 // model is the physical intuition made visible: focused ultrasound is deep+small, MRI/gamma
 // penetrate the whole volume, optical/IR only see the surface, X-ray cuts a penetrating band.
-const MODES = [
+export const MODES = [
   { id: 'ultrasound', label: 'Ultrasound (focused)', kind: 'acoustic', f: 1e6, v: C_SND, reach: 'focal', frac: 0.10, note: 'deep but a tiny focal spot' },
   { id: 'infrasound', label: 'Infrasound', kind: 'acoustic', f: 12, v: C_AIR, reach: 'volume', frac: 0.22, note: 'broad, weak, diffuse' },
   { id: 'radio', label: 'Radio waves (MRI)', kind: 'electromagnetic', f: 64e6, v: C_EM, reach: 'volume', frac: 0.5, note: 'penetrates the whole volume' },
@@ -27,7 +27,7 @@ const MODES = [
 const SPECTRUM = ['ultrasound', 'infrared', 'radio'];
 
 const eng = (x, unit) => {   // human-readable engineering notation
-  const p = [[1e9, 'G'], [1e6, 'M'], [1e3, 'k'], [1, ''], [1e-3, 'm'], [1e-6, 'µ'], [1e-9, 'n'], [1e-12, 'p']];
+  const p = [[1e21, 'Z'], [1e18, 'E'], [1e15, 'P'], [1e12, 'T'], [1e9, 'G'], [1e6, 'M'], [1e3, 'k'], [1, ''], [1e-3, 'm'], [1e-6, 'µ'], [1e-9, 'n'], [1e-12, 'p']];
   for (const [m, s] of p) if (Math.abs(x) >= m) return `${(x / m).toFixed(x / m < 10 ? 1 : 0)} ${s}${unit}`;
   return `${x.toExponential(1)} ${unit}`;
 };
@@ -41,6 +41,9 @@ export function stopWaves() {
 export function renderWaves(el) {
   const data = window.__connectome;
   el.classList.add('stage');
+  const modeRows = MODES.map((m) => `<label class="wv-mode-row"><input type="checkbox" data-id="${m.id}" ${SPECTRUM.includes(m.id) ? 'checked' : ''}>
+    <b>${m.label.split(' (')[0]}</b><span class="muted">${eng(m.f, 'Hz')} · ${m.reach}</span></label>`).join('');
+
   el.innerHTML = `
     <canvas id="wv-canvas" class="stage-canvas" style="cursor:crosshair"></canvas>
     <div class="overlay stats" style="max-width:300px">
@@ -48,27 +51,25 @@ export function renderWaves(el) {
       <h3><span id="wv-cov">0%</span> reached</h3>
       <div class="statrow"><span>neurons reached</span><b id="wv-n">0</b></div>
       <div class="statrow"><span>blind spots</span><b id="wv-blind">—</b></div>
-      <hr class="divider" style="margin:.4rem 0">
-      <div class="statrow"><span>frequency f</span><b id="wv-f">—</b></div>
-      <div class="statrow"><span>wavelength λ</span><b id="wv-lambda">—</b></div>
-      <div class="statrow"><span>reach</span><b id="wv-reach">—</b></div>
-      <button class="btn" id="wv-reset" style="margin-top:.5rem">reset coverage</button>
-      <div class="muted small">One modality only reaches its own tissue — <b>combine the spectrum</b> to cover the blind spots (ultrasound can't map the whole brain).</div>
+      <button class="btn" id="wv-reset" style="margin-top:.4rem">reset coverage</button>
+      <hr class="divider" style="margin:.55rem 0 .4rem">
+      <div class="eyebrow" style="margin-bottom:.2rem">invented waves</div>
+      <div class="panel-card-list" id="wv-saved" style="max-height:24vh"></div>
+      <div class="muted small">Ultrasound alone leaves blind spots — combine modalities into a new wave, then <b>test it in Scanner</b>.</div>
     </div>
     <div class="overlay controls">
-      <div class="eyebrow">〰️ wave modality</div>
-      <label class="field">wave
-        <select id="wv-mode">
-          <optgroup label="acoustic (mechanical)">${MODES.filter((m) => m.kind === 'acoustic').map((m) => `<option value="${m.id}">${m.label}</option>`).join('')}</optgroup>
-          <optgroup label="electromagnetic">${MODES.filter((m) => m.kind === 'electromagnetic').map((m) => `<option value="${m.id}">${m.label}</option>`).join('')}</optgroup>
-        </select></label>
+      <div class="eyebrow">〰️ invent a wave</div>
+      <div class="muted small" style="margin:-.1rem 0 .1rem">combine modalities across the spectrum:</div>
+      <div class="wv-modes">${modeRows}</div>
       <label class="field">channel (biomolecule)
         <select id="wv-chan"><option value="direct">— direct (no molecule) —</option></select></label>
       <label class="ctl">amplitude <input id="wv-amp" type="range" min="1" max="8" step="0.5" value="5"><span id="wv-amp-v">5</span></label>
       <label class="ctl">effect <select id="wv-sign"><option value="1">excite</option><option value="-1">inhibit</option></select></label>
-      <button class="btn act" id="wv-fire">🔊 Fire wave at focus</button>
-      <button class="btn act" id="wv-combine">✳ Combine spectrum — cover blind spots</button>
-      <div class="muted small" id="wv-note">Click the tissue to aim. Every wave has amplitude · λ · f (v = f·λ); the band sets its reach.</div>
+      <button class="btn act" id="wv-fire">🔊 Fire selected combination</button>
+      <label class="field">name
+        <input id="wv-name" type="text" placeholder="e.g. TriBand-1" style="text-transform:none"></label>
+      <button class="btn act" id="wv-invent">💾 Invent this wave</button>
+      <div class="muted small" id="wv-note">Click the tissue to aim, fire the combination, then save it. Every wave has amplitude · λ · f (v = f·λ); the band sets its reach.</div>
     </div>`;
 
   const canvas = el.querySelector('#wv-canvas');
@@ -89,16 +90,7 @@ export function renderWaves(el) {
     chanSel.insertAdjacentHTML('beforeend', cs.map((c, i) => `<option value="${i}">${c.id} · ${chanType(c)}</option>`).join(''));
   });
 
-  const mode = () => MODES.find((m) => m.id === el.querySelector('#wv-mode').value) || MODES[0];
-  const showMode = () => {
-    const m = mode(), lam = m.v / m.f;
-    el.querySelector('#wv-f').textContent = eng(m.f, 'Hz');
-    el.querySelector('#wv-lambda').textContent = eng(lam, 'm');
-    el.querySelector('#wv-reach').textContent = `${m.reach} · ${m.note}`;
-    el.querySelector('#wv-note').innerHTML = `<b>${m.label}</b>: ${m.note}. λ = v/f = ${eng(lam, 'm')} · reaches the <b>${m.reach}</b>.`;
-  };
-  el.querySelector('#wv-mode').addEventListener('change', showMode);
-  showMode();
+  const selectedModes = () => [...el.querySelectorAll('.wv-mode-row input:checked')].map((cb) => MODES.find((m) => m.id === cb.dataset.id)).filter(Boolean);
 
   const fireMode = (m) => {
     if (!bench) return;
@@ -106,9 +98,28 @@ export function renderWaves(el) {
     const ch = chanSel.value === 'direct' ? null : channels[+chanSel.value];
     const sign = ch ? ch.sign : +el.querySelector('#wv-sign').value;
     const gain = ch ? amp * ch.sensitivity * ch.conductance : amp;
-    WB.wave = { form: m.id, freq: m.f, pressure: amp, sign };
     bench.setReach(m.reach, m.frac);
     bench.fireWave(sign, gain, m.reach === 'focal' ? 'pulse' : 'continuous', 1);
+  };
+  const fireCombo = () => { const ms = selectedModes(); ms.forEach((m, k) => setTimeout(() => fireMode(m), k * 750)); };
+
+  const renderSaved = () => {
+    const box = el.querySelector('#wv-saved');
+    box.innerHTML = WB.waves.length
+      ? WB.waves.map((w) => `<div class="mol-row"><b>${w.name}</b><span class="mono">${w.modes.length} modes</span><span class="chip ${w.coverage >= 0.8 ? 'ok' : ''}">${Math.round(w.coverage * 100)}%</span></div>`).join('')
+      : '<div class="muted small">None yet — invent one below.</div>';
+  };
+  renderSaved();
+
+  const invent = () => {
+    const ms = selectedModes(); if (!ms.length) return;
+    const name = el.querySelector('#wv-name').value.trim() || `Wave-${WB.waves.length + 1}`;
+    const w = { name, modes: ms.map((m) => m.id), amplitude: +el.querySelector('#wv-amp').value,
+      sign: +el.querySelector('#wv-sign').value, coverage: bench ? +bench.coverage().toFixed(2) : 0 };
+    WB.waves.push(w); WB.wave = w;
+    el.querySelector('#wv-name').value = '';
+    renderSaved();
+    el.querySelector('#wv-note').innerHTML = `Saved <b>${name}</b> (${ms.length} modalities, ${Math.round(w.coverage * 100)}% coverage) → now open <b>Scanner</b> to test it on a connectome.`;
   };
 
   canvas.addEventListener('click', (e) => { const r = canvas.getBoundingClientRect(); bench && bench.aimAt(e.clientX - r.left, e.clientY - r.top); });
@@ -118,13 +129,9 @@ export function renderWaves(el) {
     const r = canvas.getBoundingClientRect();
     bench.zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
   }, { passive: false });
-  el.querySelector('#wv-fire').addEventListener('click', () => fireMode(mode()));
+  el.querySelector('#wv-fire').addEventListener('click', fireCombo);
+  el.querySelector('#wv-invent').addEventListener('click', invent);
   el.querySelector('#wv-reset').addEventListener('click', () => bench && bench.clearCoverage());
-  el.querySelector('#wv-combine').addEventListener('click', () => {
-    // fire the complementary spectrum set (deep focal + surface + whole-volume) in sequence —
-    // each covers a different tissue, together they leave no blind spots.
-    SPECTRUM.forEach((id, k) => setTimeout(() => fireMode(MODES.find((m) => m.id === id)), k * 900));
-  });
 
   timer = setInterval(() => {
     if (!bench) return;

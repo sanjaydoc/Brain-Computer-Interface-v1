@@ -75,6 +75,33 @@ function composeCircuit(concept) {
     wire('U1', 'D2', 'DRV1', 'IN1', 'data', 'PWM'); wire('U1', 'D9', 'DRV1', 'IN2', 'data', 'DIR'); wire('DRV1', 'OUT1', 'M1', '+', 'power', ''); wire('DRV1', 'OUT2', 'M1', '-', 'power', ''); wire('BAT1', 'V+', 'DRV1', 'VCC', 'power', '3.7V'); io = true;
   }
   if (has(t, 'oled', 'display', 'screen', 'lcd')) { add('OL1', 'oled', 'DISPLAY', 'Display', 'SSD1306 OLED', '128x64 I2C', ['VCC', 'GND', 'SDA', 'SCL']); i2c('OL1'); io = true; }
+
+  // wave-modality transducers — a wave-sensor front-end prototyped from an imported wave
+  if (has(t, 'ultrasound', 'sono') && !comps.some((c) => c.id === 'US1')) {
+    add('US1', 'transistor', 'ACTUATOR', 'US transducer', '1MHz PZT', 'piezo write/read', ['+', '-', 'CTRL']);
+    wire('U1', 'IO', 'US1', 'CTRL', 'data', 'US'); io = true;
+  }
+  if (has(t, 'infrared', 'nir', 'fnirs', 'optical')) {
+    add('IR1', 'led', 'ACTUATOR', 'NIR emitter', '850nm LED', 'optical source', ['A', 'K']);
+    add('PD1', 'sensor', 'SENSOR', 'Photodiode', 'OPT101', 'NIR detector', ['OUT', 'VCC', 'GND']);
+    wire('U1', 'D9', 'IR1', 'A', 'data', 'drive'); wire('PD1', 'OUT', 'U1', 'IO', 'data', 'sense');
+    wire('PM1', 'VOUT', 'PD1', 'VCC', 'power', mcuV); wire('BAT1', 'GND', 'PD1', 'GND', 'power', 'GND'); io = true;
+  }
+  if (has(t, 'radio', 'rf', 'mri')) {
+    add('RF1', 'module', 'MODULE', 'RF front-end', 'LNA + mixer', 'radio receiver', ['ANT', 'IF', 'VCC']);
+    add('ANT1', 'module', 'MODULE', 'Antenna', 'loop coil', 'RF pickup', ['A']);
+    wire('ANT1', 'A', 'RF1', 'ANT', 'data', 'RF'); wire('RF1', 'IF', 'U1', 'IO', 'data', 'IF');
+    wire('PM1', 'VOUT', 'RF1', 'VCC', 'power', mcuV); io = true;
+  }
+  if (has(t, 'microwave')) {
+    add('MW1', 'module', 'MODULE', 'Microwave sensor', 'Doppler radar', '10.5 GHz', ['OUT', 'VCC', 'GND']);
+    wire('MW1', 'OUT', 'U1', 'IO', 'data', 'IF'); wire('PM1', 'VOUT', 'MW1', 'VCC', 'power', mcuV); io = true;
+  }
+  if (has(t, 'xray', 'gamma', 'pet', 'ct')) {
+    add('SC1', 'sensor', 'SENSOR', 'Scintillator + SiPM', 'LYSO + SiPM', 'ionizing detector', ['SIG', 'BIAS', 'GND']);
+    wire('SC1', 'SIG', 'U1', 'IO', 'data', 'pulse'); wire('PM1', 'VOUT', 'SC1', 'BIAS', 'power', mcuV); io = true;
+  }
+
   if (!io || has(t, 'led', 'light', 'blink', 'indicator')) {
     add('R1', 'resistor', 'MODULE', 'Current-limit resistor', '220Ω 1/4W', '220 ohm', ['1', '2']);
     add('LED1', 'led', 'DISPLAY', 'LED', 'Red 5mm', '2V 20mA', ['A', 'K']);
@@ -207,6 +234,8 @@ export async function renderElectronics(el) {
       <label class="field">concept
         <input id="el-concept" type="text" value="EEG BCI headset with 8 electrodes + stimulator" style="text-transform:none" /></label>
       <div class="muted small" style="margin:-.2rem 0 .1rem">try: “ESP32 neural node with IMU + OLED”, “motor driver robot”, “ECG monitor”</div>
+      <label class="field">import wave sensor (from Waves)
+        <select id="el-wave"><option value="">— none —</option></select></label>
       <button class="btn act" id="el-gen">▶ Generate</button>
       <div class="seg" style="margin-top:.2rem">
         <button class="seg-btn active" data-b="schematic">schematic</button>
@@ -243,6 +272,19 @@ export async function renderElectronics(el) {
       + `<div class="muted small" style="margin-top:.3rem">${circuit.components.length} parts · ${circuit.connections.length} nets`
       + `${circuit.backend ? ` · ${circuit.backend}` : ''}${circuit.note ? ` (${circuit.note})` : ''}</div>`;
   };
+
+  // import an invented wave → seed a wave-sensor concept and generate its circuit
+  const WORDS = { ultrasound: 'ultrasound transducer', infrasound: 'acoustic sensor', radio: 'radio RF front-end',
+    microwave: 'microwave sensor', infrared: 'infrared NIR optode', xray: 'x-ray detector', gamma: 'gamma detector' };
+  const waveSel = el.querySelector('#el-wave');
+  waveSel.insertAdjacentHTML('beforeend', WB.waves.map((w, i) => `<option value="${i}">${w.name} · ${w.modes.length} modes</option>`).join(''));
+  waveSel.addEventListener('change', () => {
+    if (waveSel.value === '') return;
+    const w = WB.waves[+waveSel.value];
+    const parts = w.modes.map((m) => WORDS[m] || m).join(' + ');
+    el.querySelector('#el-concept').value = `${w.name} wave sensor: ${parts}, bio-AFE and MCU`;
+    run();
+  });
 
   el.querySelector('#el-gen').addEventListener('click', run);
   el.querySelector('#el-concept').addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });

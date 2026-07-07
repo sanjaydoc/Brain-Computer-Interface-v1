@@ -5,7 +5,8 @@
 import { renderBiomolecules, demoChannels, chanType } from './molecular.js';
 import { renderElectronics } from './electronics.js';
 import { renderPhysics } from './physics.js';
-import { renderWaves, stopWaves } from './waves.js';
+import { renderWaves, stopWaves, MODES } from './waves.js';
+import { WB } from './workbench.js';
 import { renderHardware } from './hardware.js';
 import { renderFusion, renderPrint, stopFusion } from './fusion.js';
 import { TestBench } from './testbench.js';
@@ -41,6 +42,19 @@ function stopLive() {
   stopWaves(); stopFusion();
 }
 
+// fire an invented wave's modality combination on a 2D bench (each modality reaches a
+// different part of the tissue → together they cover the blind spots a single wave leaves)
+function fireWaveCombo(bench, wave) {
+  if (!bench || !wave) return;
+  wave.modes.forEach((id, k) => {
+    const m = MODES.find((x) => x.id === id); if (!m) return;
+    setTimeout(() => {
+      bench.setReach(m.reach, m.frac);
+      bench.fireWave(wave.sign || 1, wave.amplitude || 5, m.reach === 'focal' ? 'pulse' : 'continuous', 1);
+    }, k * 750);
+  });
+}
+
 function renderScanner(el) {
   el.classList.add('stage');
   el.innerHTML = `
@@ -65,13 +79,17 @@ function renderScanner(el) {
         <button class="zoom-btn" id="sc-zreset" title="reset view">⤢</button>
         <span class="muted" style="text-transform:none">· or scroll on the tissue</span>
       </div>
+      <label class="field">imported wave (from Waves)
+        <select id="sc-wave"><option value="">— none (raw ultrasound) —</option></select></label>
+      <button class="btn act" id="sc-testwave">🌊 Test imported wave</button>
+      <hr class="divider" style="margin:.5rem 0 .2rem">
       <label class="field">channel
         <select id="sc-chan"><option value="direct">— direct (no molecule) —</option></select></label>
       <label class="field">effect
         <select id="sc-sign"><option value="1">excite (cation)</option><option value="-1">inhibit (anion)</option></select></label>
       <label class="ctl">pressure <input id="sc-gain" type="range" min="1" max="7" step="0.5" value="5"><span id="sc-gain-v">5</span></label>
       <button class="btn act" id="sc-pulse">🔊 Deliver ultrasound pulse</button>
-      <div class="muted small" id="sc-hint">Click the tissue to aim the focus. A molecule scales the same pulse by its <b>sensitivity × conductance</b>, so each one lands differently.</div>
+      <div class="muted small" id="sc-hint">Invent a wave in <b>Waves</b>, pick it above and Test it here — switch the connectome (top-left) to test it on different brains.</div>
     </div>`;
 
   const data = window.__connectome;
@@ -128,6 +146,18 @@ function renderScanner(el) {
     const ch = chanSel.value === 'direct' ? null : channels[+chanSel.value];
     if (ch) { signSel.value = String(ch.sign); signSel.disabled = true; }
     else signSel.disabled = false;
+  });
+
+  // imported waves (invented in the Waves tab) — Test fires the wave's modality combination
+  const waveSel = el.querySelector('#sc-wave');
+  waveSel.insertAdjacentHTML('beforeend', WB.waves.map((w, i) =>
+    `<option value="${i}">${w.name} · ${w.modes.length} modes</option>`).join(''));
+  el.querySelector('#sc-testwave').addEventListener('click', () => {
+    const w = waveSel.value === '' ? null : WB.waves[+waveSel.value];
+    if (!w) { hint.innerHTML = 'No wave selected. Invent one in the <b>Waves</b> tab first, then it appears here.'; return; }
+    if (scView === '2d') fireWaveCombo(scanBench, w);
+    else if (window.__sim) { window.__sim.stimulatePatch(0.14, (w.sign || 1) * (w.amplitude || 5)); if (window.__ensureRunning) window.__ensureRunning(); }
+    hint.innerHTML = `Testing <b>${w.name}</b> (${w.modes.join(' + ')}) on <b>${data.name || 'this connectome'}</b> — switch the connectome to test other brains.`;
   });
 
   el.querySelector('#sc-pulse').addEventListener('click', () => {
