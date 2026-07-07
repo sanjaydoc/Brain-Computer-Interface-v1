@@ -6,6 +6,7 @@ import * as THREE from './lib/three.module.min.js';
 import { OrbitControls } from './lib/OrbitControls.js';
 import { BrainSim } from './sim.js';
 import { WormViz } from './worm2d.js';
+import { FlyViz } from './fly2d.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -36,7 +37,7 @@ controls.autoRotate = true;
 controls.autoRotateSpeed = 0.9;
 
 let neuronMesh = null, pointsMesh = null, edgeLines = null, data = null;
-let sim = null, worm = null, running = false;
+let sim = null, avatar = null, avatarKind = null, running = false;
 let baseCol = null;             // Float32Array n*3, out-degree ramp
 let renderMode = 'instanced';   // 'instanced' (spheres, small) | 'points' (GPU, LOD)
 let colorAttr = null;           // Points color buffer (LOD path)
@@ -52,7 +53,7 @@ function resize() {
   if (!w || !h) return;
   renderer.setSize(w, h, false);   // match drawing buffer to the CSS box (don't restyle)
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  if (worm) worm.resize();
+  if (avatar) avatar.resize();
 }
 window.addEventListener('resize', resize);
 
@@ -202,7 +203,15 @@ function build(d) {
   sim = new BrainSim(d);
   window.__sim = sim;          // exposed for tuning/inspection
   window.__connectome = d;     // exposed for the molecular assay
-  if (!worm) worm = new WormViz($('worm'));
+  // Pick the avatar the loaded brain can actually drive: the fly's descending motor pathway
+  // flies a fly; the worm's command circuit crawls a worm.
+  const kind = sim.hasFlight ? 'fly' : 'worm';
+  if (avatarKind !== kind || !avatar) {
+    avatar = sim.hasFlight ? new FlyViz($('worm')) : new WormViz($('worm'));
+    avatarKind = kind;
+    window.__avatar = avatar;
+    setVenvNote(kind);
+  }
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
   resize(); requestAnimationFrame(resize);
@@ -234,26 +243,52 @@ function updateNeuronColors() {
   neuronMesh.instanceColor.needsUpdate = true;
 }
 
-let smAct = 0, smLoco = 0;   // muscle-integrated (smoothed) motor drive
-function driveWorm() {
+let smAct = 0, smLoco = 0, smThrust = 0, smYaw = 0;   // muscle-integrated (smoothed) motor drive
+function driveAvatar() {
   // Everything here comes from the connectome simulation — no scripted motion.
-  // The body integrates motor output (neuromuscular smoothing), so the crawl is
-  // continuous even though neural firing pulses.
   let mean = 0; for (let i = 0; i < sim.n; i++) mean += sim.act[i]; mean /= sim.n;
   smAct = smAct * 0.9 + mean * 0.1;
-  smLoco = smLoco * 0.9 + sim.locomotion() * 0.1;
-  const active = smAct > 0.02;
-  const dir = smLoco < -0.02 ? -1 : 1;
-  const drive = active ? (0.15 + 3.4 * smAct + 1.3 * Math.abs(smLoco)) : 0;
-  worm.frame({ drive, dir, activity: smAct, turn: dir < 0 ? 0.7 : 0 });
 
   const loco = $('loco');
-  if (!active) { loco.textContent = 'idle'; loco.className = 'loco'; }
-  else if (dir < 0) { loco.textContent = 'reversing ←'; loco.className = 'loco rev'; }
-  else { loco.textContent = 'forward crawl →'; loco.className = 'loco fwd'; }
+  if (avatarKind === 'fly') {
+    // Flight decoded from the fly's descending + motor neurons (see sim.flight()).
+    const { thrust, yaw } = sim.flight();
+    smThrust = smThrust * 0.9 + thrust * 0.1;
+    smYaw = smYaw * 0.88 + yaw * 0.12;
+    const flying = smThrust > 0.008;
+    const speed = flying ? (0.5 + 46 * smThrust) : 0;     // px/frame from motor drive
+    avatar.frame({ thrust: speed, yaw: smYaw * 7, activity: smAct, wingbeat: smThrust * 10 });
+    if (!flying) { loco.textContent = 'hovering'; loco.className = 'loco'; }
+    else if (smYaw > 0.006) { loco.textContent = 'banking right ↻'; loco.className = 'loco fwd'; }
+    else if (smYaw < -0.006) { loco.textContent = 'banking left ↺'; loco.className = 'loco rev'; }
+    else { loco.textContent = 'flying →'; loco.className = 'loco fwd'; }
+  } else {
+    // The body integrates motor output (neuromuscular smoothing), so the crawl is
+    // continuous even though neural firing pulses.
+    smLoco = smLoco * 0.9 + sim.locomotion() * 0.1;
+    const active = smAct > 0.02;
+    const dir = smLoco < -0.02 ? -1 : 1;
+    const drive = active ? (0.15 + 3.4 * smAct + 1.3 * Math.abs(smLoco)) : 0;
+    avatar.frame({ drive, dir, activity: smAct, turn: dir < 0 ? 0.7 : 0 });
+    if (!active) { loco.textContent = 'idle'; loco.className = 'loco'; }
+    else if (dir < 0) { loco.textContent = 'reversing ←'; loco.className = 'loco rev'; }
+    else { loco.textContent = 'forward crawl →'; loco.className = 'loco fwd'; }
+  }
 
   let firing = 0; for (let i = 0; i < sim.n; i++) if (sim.act[i] > 0.08) firing++;
   $('cx-firing').textContent = firing;
+}
+
+function setVenvNote(kind) {
+  const note = document.querySelector('.venv-note');
+  if (!note) return;
+  note.innerHTML = kind === 'fly'
+    ? `Flight is <b>decoded live from the descending + motor neurons</b> — the fly brain's real
+       motor-command output. Their firing drives thrust; left/right descending asymmetry banks
+       the turn. It emerges from simulating the FlyWire connectome — nothing is scripted.`
+    : `Locomotion is <b>decoded live from the command neurons</b> — it emerges from
+       simulating the connectome. Driving reverse (AVA) → the worm backs up; forward
+       (AVB) or posterior touch → it crawls ahead.`;
 }
 
 let frame = 0;
@@ -263,9 +298,9 @@ function animate() {
   if (running && sim) {
     for (let s = 0; s < 2; s++) sim.step();
     updateNeuronColors();
-    driveWorm();
+    driveAvatar();
   }
-  // when paused, nothing moves — the worm only moves from live brain activity
+  // when paused, nothing moves — the avatar only moves from live brain activity
   renderer.render(scene, camera);
   frame++;
 }
