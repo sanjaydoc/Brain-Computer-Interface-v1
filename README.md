@@ -253,24 +253,30 @@ The browser demo and the Python engine (`bci run`) run the **same** model.
 
 ## 🚀 Quickstart
 
-```bash
-# 1. set up (uv recommended)
-uv venv && uv pip install -e ".[dev]"
+Run the full cockpit locally in one command. Full command reference: **[RUN.md](RUN.md)**.
 
-# 2. list the swappable connectome sources
-bci sources
-#   connectome sources: synthetic
-
-# 3. build a brain from a profile and print stats
-bci load profiles/synthetic_small.yaml
-#   Connectome: 1,000 neurons, 9,953 synapses (~10.0 syn/neuron)  loaded in 5.7 ms
-
-# 4. run the tests — including the scalability proof at 1,000,000 neurons
-pytest
-
-# 5. regenerate the figures in this README from live measurements
-.venv/bin/python scripts/make_figures.py
+**Windows (PowerShell)** — no activation needed, call the venv Python directly:
+```powershell
+git clone https://github.com/sanjaydoc/Brain-Computer-Interface-v1.git
+cd Brain-Computer-Interface-v1
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,api]"
+.\.venv\Scripts\python.exe -m bci.cli serve
 ```
+
+**macOS / Linux:**
+```bash
+git clone https://github.com/sanjaydoc/Brain-Computer-Interface-v1.git
+cd Brain-Computer-Interface-v1
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev,api]"
+bci serve
+```
+
+Then open **http://localhost:8000/app/** — the live control plane (run the brain, generate
+biomolecules, deliver ultrasound, tune it live). See **[RUN.md](RUN.md)** for `bci load` /
+`bci run` / `pytest` and enabling real De-Novo-LLM generation.
 
 ---
 
