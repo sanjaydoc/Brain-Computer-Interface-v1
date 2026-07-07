@@ -52,14 +52,59 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 
-fetch('./data/celegans.json').then(r => r.json()).then(build).catch(err => {
-  $('loading').textContent = 'Failed to load connectome: ' + err;
-});
+// --- connectome selection ----------------------------------------------------
+let started = false;
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// A synthetic network (real SyntheticSource, in the browser) — shows the platform's
+// pluggability + scale. Not a real organism; clearly labelled as synthetic.
+function makeSynthetic(n, k = 8) {
+  const rng = mulberry32(12345);
+  const pos = [], ids = [], types = [], outdeg = new Array(n).fill(0), edges = [];
+  for (let i = 0; i < n; i++) {
+    pos.push([(rng() * 2 - 1) * 140, (rng() * 2 - 1) * 140, (rng() * 2 - 1) * 140]);
+    ids.push('n' + i); types.push('synthetic');
+  }
+  for (let i = 0; i < n; i++) for (let e = 0; e < k; e++) {
+    const j = (rng() * n) | 0; if (j === i) continue;
+    edges.push([i, j, 1 + ((rng() * 4) | 0)]); outdeg[i]++;
+  }
+  return { name: `Synthetic · ${n.toLocaleString()}`, n_neurons: n, n_synapses: edges.length,
+    ids, types, pos, outdeg, edges };
+}
+
+function loadConnectome(val) {
+  if (val === 'celegans') {
+    fetch('./data/celegans.json').then(r => r.json())
+      .then(d => build({ ...d, name: 'C. elegans' }))
+      .catch(err => { const l = $('loading'); if (l) l.textContent = 'Failed: ' + err; });
+  } else if (val.startsWith('synthetic:')) {
+    build(makeSynthetic(+val.split(':')[1], 8));
+  }
+}
+loadConnectome('celegans');
+
+function disposeScene() {
+  for (const o of [neuronMesh, edgeLines]) {
+    if (!o) continue;
+    scene.remove(o); o.geometry.dispose(); o.material.dispose();
+  }
+  neuronMesh = edgeLines = null;
+}
 
 function build(d) {
+  disposeScene();
   data = d;
-  $('loading').remove();
-  $('cx-name').textContent = 'C. elegans';
+  const l = $('loading'); if (l) l.remove();
+  $('cx-name').textContent = d.name || 'C. elegans';
   $('cx-neurons').textContent = d.n_neurons.toLocaleString();
   $('cx-synapses').textContent = d.n_synapses.toLocaleString();
 
@@ -98,12 +143,12 @@ function build(d) {
   sim = new BrainSim(d);
   window.__sim = sim;          // exposed for tuning/inspection
   window.__connectome = d;     // exposed for the molecular assay
-  worm = new WormViz($('worm'));
+  if (!worm) worm = new WormViz($('worm'));
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
   resize(); requestAnimationFrame(resize);
   toggleRun(true);   // the brain is spontaneously active from the start
-  animate();
+  if (!started) { started = true; animate(); }
 }
 
 const col = new THREE.Color();
@@ -194,5 +239,13 @@ $('spin').addEventListener('change', e => { controls.autoRotate = e.target.check
 $('edges').addEventListener('change', e => { if (edgeLines) edgeLines.visible = e.target.checked; });
 $('edgeop').addEventListener('input', e => { if (edgeLines) edgeLines.material.opacity = e.target.value / 100; });
 $('reset').addEventListener('click', () => { camera.position.set(...HOME); controls.target.copy(homeTarget); });
+
+// connectome selector — rebuild the twin, and return to the 3D view
+const cxSel = $('cx-select');
+if (cxSel) cxSel.addEventListener('change', (e) => {
+  loadConnectome(e.target.value);
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'brain'));
+  const p = $('panel'); if (p) { p.hidden = true; p.innerHTML = ''; }
+});
 
 resize();
