@@ -53,7 +53,10 @@ class Engine:
         self.c = connectome
         self.n = connectome.n_neurons
         self.neuron = neuron_models.create(neuron_impl, n=self.n, **(neuron_params or {}))
-        self.sign = inhibitory_mask(connectome.ids)
+        # Real excit/inhib sign if the connectome carries it (e.g. FlyWire neurotransmitters);
+        # otherwise fall back to the name-based heuristic (C. elegans GABAergic families).
+        self.sign = (connectome.sign if getattr(connectome, "sign", None) is not None
+                     else inhibitory_mask(connectome.ids))
         wt = build_transpose(connectome.weights, self.sign, row_normalize=row_normalize)
         self.stepper = NumpyStepper(wt, gsyn=gsyn)
 

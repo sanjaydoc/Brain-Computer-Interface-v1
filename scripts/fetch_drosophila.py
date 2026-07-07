@@ -32,10 +32,11 @@ WEB = ROOT / "docs" / "app" / "data" / "drosophila.json"
 
 
 def _col(row: dict, *cands, default=None):
-    """Case-insensitive column lookup across a list of candidate names."""
+    """Case-insensitive column lookup; skips blank cells so a present-but-empty column
+    falls through to the next candidate."""
     for c in cands:
         for k in row:
-            if k.lower() == c:
+            if k.lower() == c and str(row[k]).strip():
                 return row[k]
     return default
 
@@ -59,8 +60,12 @@ def _xyz(row: dict):
     return None
 
 
-def _read_rooted(path: str, want_pos: bool, want_type: bool, pos: dict, types: dict, keep: set):
-    """Scan a FlyWire table keyed by root_id, filling pos/types for the kept neurons."""
+_TYPE_COLS = ("cell_type", "primary_type", "type", "super_class", "class")
+
+
+def _read_rooted(path, want_pos, want_type, pos, types, keep, type_cols=_TYPE_COLS):
+    """Scan a FlyWire table keyed by root_id, filling pos/types for the kept neurons.
+    `type_cols` sets which label column wins (classification passes super_class first)."""
     with open(path, newline="") as f:
         for row in csv.DictReader(f):
             rid = str(_col(row, "root_id", "pt_root_id", "bodyid", "id", default="")).strip()
@@ -71,7 +76,7 @@ def _read_rooted(path: str, want_pos: bool, want_type: bool, pos: dict, types: d
                 if xyz is not None:
                     pos[rid] = xyz
             if want_type and rid not in types:
-                t = _col(row, "cell_type", "primary_type", "type", "super_class", "class", default=None)
+                t = _col(row, *type_cols, default=None)
                 if t:
                     types[rid] = str(t)
 
@@ -81,6 +86,10 @@ def main() -> None:
     ap.add_argument("--connections", required=True, help="Connections (Filtered) CSV")
     ap.add_argument("--coordinates", help="Marked Neuron Coordinates CSV (positions)")
     ap.add_argument("--types", help="Cell Types CSV (labels)")
+    ap.add_argument("--classification", help="Classification / Hierarchical Annotations CSV "
+                    "(super_class → grouping, takes priority for the label)")
+    ap.add_argument("--neurotransmitters", help="Neurotransmitter Type Predictions CSV "
+                    "(→ excitatory/inhibitory sign)")
     ap.add_argument("--neurons", help="legacy: one combined neurons table (position + type)")
     ap.add_argument("--max-neurons", type=int, default=20000)
     args = ap.parse_args()
@@ -101,13 +110,30 @@ def main() -> None:
     keep = set(sorted(deg, key=deg.get, reverse=True)[: args.max_neurons])
     print(f"neurons in connections: {len(deg):,} → keeping top {len(keep):,} by connectivity")
 
-    # 2) positions + types from whichever files were supplied
+    # 2) positions + labels. Classification's super_class wins the label (coarse, meaningful
+    #    groups); Cell Types / combined file fill any gaps. Coordinates give real positions.
     OUT.mkdir(parents=True, exist_ok=True)
     pos, types = {}, {}
+    for path in filter(None, [args.classification]):
+        _read_rooted(path, want_pos=False, want_type=True, pos=pos, types=types, keep=keep,
+                     type_cols=("super_class", "class", "cell_type", "primary_type", "type"))
     for path in filter(None, [args.neurons, args.coordinates]):
         _read_rooted(path, want_pos=True, want_type=True, pos=pos, types=types, keep=keep)
     for path in filter(None, [args.types]):
         _read_rooted(path, want_pos=False, want_type=True, pos=pos, types=types, keep=keep)
+
+    # 2b) neurotransmitter → sign (ACh excites; GABA / glutamate inhibit; monoamines modulate)
+    nt = {}
+    if args.neurotransmitters:
+        with open(args.neurotransmitters, newline="") as f:
+            for row in csv.DictReader(f):
+                rid = str(_col(row, "root_id", "pt_root_id", "id", default="")).strip()
+                if rid in keep:
+                    t = _col(row, "nt_type", "neurotransmitter", "top_nt", "nt", default=None)
+                    if t:
+                        nt[rid] = str(t)
+        print(f"  neurotransmitter labels for {len(nt):,} neurons "
+              f"→ {sum(1 for v in nt.values() if str(v).upper() in ('GABA', 'GLUT', 'GLUTAMATE')):,} inhibitory")
 
     # neurons with no coordinate get a deterministic fallback point (keeps the graph whole)
     missing = [rid for rid in keep if rid not in pos]
@@ -124,10 +150,10 @@ def main() -> None:
 
     with open(OUT / "neurons.csv", "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["id", "type", "x", "y", "z"])
+        w.writerow(["id", "type", "x", "y", "z", "nt"])
         for rid in keep:
             x, y, z = pos[rid]
-            w.writerow([rid, types.get(rid, "neuron"), x, y, z])
+            w.writerow([rid, types.get(rid, "neuron"), x, y, z, nt.get(rid, "")])
     rows = 0
     with open(OUT / "synapses.csv", "w", newline="") as f:
         w = csv.writer(f)
@@ -138,10 +164,10 @@ def main() -> None:
                 rows += 1
     print(f"wrote {len(keep):,} neurons, {rows:,} connections")
 
-    _export_web(keep, pos, weight, types)
+    _export_web(keep, pos, weight, types, nt)
 
 
-def _export_web(keep: set, pos: dict, weight: dict, types: dict) -> None:
+def _export_web(keep: set, pos: dict, weight: dict, types: dict, nt: dict) -> None:
     import numpy as np
     ids = list(keep)
     index = {r: i for i, r in enumerate(ids)}
@@ -155,6 +181,7 @@ def _export_web(keep: set, pos: dict, weight: dict, types: dict) -> None:
     data = {
         "name": f"Drosophila · {len(ids):,}", "n_neurons": len(ids), "n_synapses": len(edges),
         "ids": ids, "types": [types.get(r, "neuron") for r in ids],
+        "nt": [str(nt.get(r, "")) for r in ids],  # neurotransmitter per neuron (excit/inhib)
         "pos": [[round(float(v) * 60, 2) for v in row] for row in a],
         "outdeg": outdeg, "edges": edges,
     }
