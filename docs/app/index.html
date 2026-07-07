@@ -89,6 +89,11 @@
           <button class="btn act" id="fly-right" title="Stimulates the RIGHT descending neurons — the fly banks right.">Bank right ↻</button>
           <div class="stim-note small">These drive the fly's real <b>descending</b> motor neurons — the same population the flight is decoded from. The fly responds because it's genuinely simulating the connectome, not following a script.</div>
         </div>
+        <div id="cortex-stim" hidden>
+          <div class="stim-group muted">visual cortex · no body — flash an input</div>
+          <button class="btn act" id="cortex-flash" title="Stimulates a compact spatial patch of neurons as a localized 'visual input', then the response propagates through the real wiring — watch it in the 3D view and the spike raster.">Flash visual input ✦</button>
+          <div class="stim-note small">MICrONS is a slice of <b>visual cortex</b> — it has no motor output, so there's no body to drive. A patch of cortex is stimulated as visual input and the response ripples through the real connectome (see the raster). A <b>cortical-response demo</b> — real propagation, not a literal image (we don't have true retinotopy).</div>
+        </div>
         <div class="muted small">…or click any neuron to stimulate it</div>
         <hr class="divider" />
         <label class="ctl"><input type="checkbox" id="spin" checked /> auto-rotate</label>
