@@ -85,6 +85,28 @@ function makeSynthetic(n, k = 8) {
     ids, types, pos, outdeg, edges };
 }
 
+const FETCH_HINT = {
+  microns: 'python scripts/fetch_microns.py --max-neurons 20000',
+  drosophila: 'python scripts/fetch_drosophila.py --neurons neurons.csv --connections connections.csv',
+};
+
+function showFetchMsg(val) {
+  const panel = $('panel'); if (!panel) return;
+  const nice = val === 'microns' ? 'MICrONS mouse cortex' : 'Drosophila (FlyWire)';
+  panel.innerHTML = `<div class="panel-inner">
+    <div class="eyebrow">${val} · not cached in this browser</div>
+    <h2>${nice} loads from a local fetch</h2>
+    <p style="max-width:62ch">Real large connectomes aren't shipped with the hosted demo —
+    they need internet + free credentials (CAVE for MICrONS, FlyWire Codex for Drosophila)
+    and a downsample step. On your own machine, run the fetch script, then this option loads
+    the real data via the LOD renderer:</p>
+    <pre><code>${FETCH_HINT[val]}</code></pre>
+    <p class="muted">See <a href="../RUN.md">RUN.md</a> for setup. Meanwhile, the worm and the
+    synthetic previews (incl. 50,000-neuron LOD) run right here.</p>
+  </div>`;
+  panel.hidden = false;
+}
+
 function loadConnectome(val) {
   if (val === 'celegans') {
     fetch('./data/celegans.json').then(r => r.json())
@@ -92,6 +114,11 @@ function loadConnectome(val) {
       .catch(err => { const l = $('loading'); if (l) l.textContent = 'Failed: ' + err; });
   } else if (val.startsWith('synthetic:')) {
     build(makeSynthetic(+val.split(':')[1], 8));
+  } else if (val === 'microns' || val === 'drosophila') {
+    fetch(`./data/${val}.json`)
+      .then(r => { if (!r.ok) throw new Error('not cached'); return r.json(); })
+      .then(build)
+      .catch(() => showFetchMsg(val));
   }
 }
 loadConnectome('celegans');

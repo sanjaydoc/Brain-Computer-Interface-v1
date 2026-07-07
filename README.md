@@ -203,14 +203,20 @@ snapshot-able (save / load / rewind), and partition-native (splittable across ma
 
 ## 🪜 The scale ladder
 
-One code path, four rungs. Scaling up is **loading the next profile**, not a rewrite.
+One code path, one North Star. Scaling up is **loading the next profile**, not a rewrite —
+same engine, same renderer, same I/O contracts. Rungs 1–2 are live today.
 
-| Rung | Source | Neurons | Synapses | Data status |
-|:----:|--------|--------:|---------:|-------------|
-| 1 | **C. elegans** (worm) | 302 | ~7,000 | ✅ real & *complete* |
-| 2 | **MICrONS** (mouse V1 mm³) | ~200,000 | ~500,000,000 | ✅ real EM |
-| 3 | **Mouse** (mesoscale) | ~71,000,000 | ~10¹² | ✅ real (regional) |
-| 4 | **🎯 Human** (North Star) | **~86,000,000,000** | **~10¹⁴** | statistical |
+| Rung | Source | Neurons | Synapses | Data status | In this repo |
+|:----:|--------|--------:|---------:|-------------|-------------|
+| 1 | **C. elegans** (worm) | 302 | ~7,000 | ✅ real & *complete* | ✅ bundled — default |
+| 2a | **MICrONS** (mouse V1 mm³) | ~200,000 | ~500,000,000 | ✅ real EM | ✅ `scripts/fetch_microns.py` |
+| 2b | **Drosophila** (FlyWire) | ~130,000 | ~50,000,000 | ✅ real EM | ✅ `scripts/fetch_drosophila.py` |
+| 3 | **Mouse** (mesoscale) | ~71,000,000 | ~10¹² | ✅ real (regional) | 🔜 planned |
+| 4 | **🎯 Human** (North Star) | **~86,000,000,000** | **~10¹⁴** | statistical | 🎯 target |
+
+Rung 1 ships with the repo. The Rung-2 brains are **fetched on your own machine** (their EM
+hosts — CAVE and FlyWire — aren't reachable from the hosted demo); once cached they load from
+the control-plane dropdown and render with automatic level-of-detail. See [RUN.md §5](RUN.md).
 
 ---
 
@@ -318,8 +324,9 @@ Brain-Computer-Interface-v1/
 - ✅ **P5 — Cockpit** · all GUI panels interactive: **Biomolecules** (generate → test), **Scanner** (ultrasound write + dust read, live), **System** (live monitor + brain-tuning sliders) + CI
 - ✅ **Part 1 wired** · **De-Novo-LLM** integrated — generate biomolecules → cast as sonogenetic channels → **test on the connectome** (local GPU / NVIDIA NIM / bundled fallback)
 - ✅ **Hodgkin–Huxley model** · biophysical neuron model, drop-in behind the same `NeuronModel` interface
+- ✅ **Rung 2 — big brains** · **MICrONS** mouse cortex (~200 k) + **Drosophila** (FlyWire) sources, LOD renderer (GPU point cloud + sampled synapses), local fetch scripts, control-plane dropdown
 
-**v1 complete — the full four-part loop is real.** Next horizon: the scale ladder — MICrONS mouse column (LOD rendering), GPU stepper, then mesoscale.
+**v1 complete — the full four-part loop is real, and the ladder is climbing.** Rungs 1–2 load today (worm bundled; MICrONS + Drosophila fetch locally). Next horizon: a GPU stepper, then mouse mesoscale (~71 M).
 
 ### Running the molecular pipeline locally
 The hosted demo uses bundled samples (a browser can't run PyTorch). On your own machine:
