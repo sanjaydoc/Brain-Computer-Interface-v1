@@ -188,14 +188,15 @@ export class TestBench {
   startLive() {
     const loop = () => {
       if (this.stopped) return;
-      if (this.pulse) {                          // an active user pulse
-        // NB: the envelope sin(t/34·π) is 0 at t=0 — don't gate on env>0 or the pulse cancels
+      if (this.pulse) {                          // an active user pulse / wave
+        // NB: the envelope is 0 at t=0 — don't gate on env>0 or the pulse cancels
         // itself on the first frame (that was the "pulse does nothing" bug).
-        if (this.pulse.t < 34) { this._write(this.pulse.g, Math.sin((this.pulse.t / 34) * Math.PI)); this.pulse.t++; }
+        if (this.pulse.t < this.pulse.dur) { this._write(this.pulse.g, this._env(this.pulse)); this.pulse.t++; }
         else { this.pulse = null; this.usPulse = 0; }
       } else this.usPulse = 0;
       this.sim.step();
       this._read();
+      if (this._track) { const a = this.sim.act; for (let i = 0; i < this.sim.n; i++) if (a[i] > 0.25) this.reached.add(i); }
       this._draw();
       this.raf = requestAnimationFrame(loop);
     };
@@ -207,7 +208,24 @@ export class TestBench {
     this.focus0 = [cx + (px - cx - this.panX) / this.zoom, cy + (py - cy - this.panY) / this.zoom];
     this._pickExpressing(); this.exprIdx = this.expr.map((e) => e[0]);
   }
-  firePulse(sign, gain) { this.pulse = { t: 0, g: sign * gain }; }   // signed gain
+  firePulse(sign, gain) { this.fireWave(sign, gain, 'pulse', 1); }   // signed gain
+
+  // waveforms: a single focused pulse, a sustained continuous tone, an on/off burst train,
+  // or a frequency chirp (sweep). Each shapes the ultrasound envelope differently → a
+  // different way to couple energy into the tissue.
+  fireWave(sign, gain, form = 'pulse', freq = 1) {
+    this.pulse = { t: 0, g: sign * gain, form, freq, dur: form === 'pulse' ? 34 : 96 };
+  }
+  _env(p) {
+    const t = p.t, dur = p.dur;
+    if (p.form === 'continuous') return Math.min(1, t / 8) * Math.min(1, (dur - t) / 8);   // sustained tone, soft edges
+    if (p.form === 'burst') return (Math.floor(t / 12) % 2 === 0) ? Math.sin(((t % 12) / 12) * Math.PI) : 0;  // on/off train
+    if (p.form === 'chirp') return Math.abs(Math.sin(t * (0.12 + (p.freq || 1) * t * 0.004)));  // frequency sweep
+    return Math.sin((t / 34) * Math.PI);   // pulse
+  }
+  startCoverage() { this._track = true; this.reached = new Set(); }
+  coverage() { return this._track && this.sim.n ? this.reached.size / this.sim.n : 0; }
+  clearCoverage() { if (this.reached) this.reached.clear(); }
   liveStats() {
     let f = 0, m = 0; for (let i = 0; i < this.sim.n; i++) { if (this.sim.act[i] > 0.1) f++; m += this.sim.act[i]; }
     return { motesActive: f, backscatter: +(m / this.sim.n).toFixed(3), readout: this.readout.at(-1) || 0 };
