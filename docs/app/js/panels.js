@@ -130,8 +130,10 @@ function renderSystem(el) {
     <table style="margin-top:16px">
       <thead><tr><th>Rung</th><th>Neurons</th><th>Synapses</th><th>Data</th></tr></thead>
       <tbody>
-        <tr><td>C. elegans</td><td>302</td><td>~7,000</td><td><span class="chip allow">real</span></td></tr>
-        <tr><td>MICrONS mouse</td><td>~200,000</td><td>~500,000,000</td><td><span class="chip allow">real</span></td></tr>
+        <tr><td>C. elegans (worm)</td><td>302</td><td>~7,000</td><td><span class="chip allow">real</span></td></tr>
+        <tr><td>Drosophila (FlyWire)</td><td>~130,000</td><td>~50,000,000</td><td><span class="chip allow">real</span></td></tr>
+        <tr><td>MICrONS mouse V1</td><td>~200,000</td><td>~500,000,000</td><td><span class="chip allow">real</span></td></tr>
+        <tr><td>Mouse mesoscale</td><td>1e5 … 71M</td><td>scales with N</td><td><span class="chip deny">statistical</span></td></tr>
         <tr><td>Human (North Star)</td><td>~86,000,000,000</td><td>~10¹⁴</td><td><span class="chip deny">statistical</span></td></tr>
       </tbody>
     </table>
