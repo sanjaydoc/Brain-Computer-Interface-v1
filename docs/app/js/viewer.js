@@ -318,7 +318,27 @@ $('reset').addEventListener('click', () => { camera.position.set(...HOME); contr
 
 // connectome selector — rebuild the twin, and return to the 3D view
 const cxSel = $('cx-select');
+
+// Native <select> sizes to its widest option, stranding the caret in the corner. Size the
+// box to the *selected* label instead (measured with the real font) so it stays snug.
+function sizeSelect() {
+  if (!cxSel) return;
+  const label = cxSel.options[cxSel.selectedIndex]?.text || '';
+  const m = document.createElement('span');
+  const cs = getComputedStyle(cxSel);
+  Object.assign(m.style, {
+    position: 'absolute', visibility: 'hidden', whiteSpace: 'pre',
+    font: cs.font, fontWeight: cs.fontWeight, letterSpacing: cs.letterSpacing,
+  });
+  m.textContent = label;
+  document.body.appendChild(m);
+  cxSel.style.width = Math.ceil(m.offsetWidth + 46) + 'px';   // text + caret + padding
+  m.remove();
+}
+sizeSelect();
+
 if (cxSel) cxSel.addEventListener('change', (e) => {
+  sizeSelect();
   loadConnectome(e.target.value);
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'brain'));
   const p = $('panel'); if (p) { p.hidden = true; p.innerHTML = ''; }
