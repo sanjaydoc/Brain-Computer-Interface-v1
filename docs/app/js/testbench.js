@@ -56,8 +56,13 @@ export class TestBench {
   // at the top for the ultrasound transducer and at the bottom for the dust readout.
   _project() {
     const pos = this.data.pos, n = pos.length;
-    let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity;
-    for (const p of pos) { mnx = Math.min(mnx, p[0]); mxx = Math.max(mxx, p[0]); mny = Math.min(mny, p[2]); mxy = Math.max(mxy, p[2]); }
+    // Map the WIDEST coordinate axis to horizontal and the next-widest to vertical, so a long
+    // body (e.g. the C. elegans worm) lies ACROSS the bench instead of down it.
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (const p of pos) for (let a = 0; a < 3; a++) { if (p[a] < lo[a]) lo[a] = p[a]; if (p[a] > hi[a]) hi[a] = p[a]; }
+    const spread = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+    const [axH, axV] = [0, 1, 2].sort((a, b) => spread[b] - spread[a]);
+    const mnx = lo[axH], mxx = hi[axH], mny = lo[axV], mxy = hi[axV];
     const mL = 24, mT = 58, mB = 74, mR = 24;
     const sx = (this.w - mL - mR) / ((mxx - mnx) || 1);
     const sy = (this.h - mT - mB) / ((mxy - mny) || 1);
@@ -67,7 +72,7 @@ export class TestBench {
     this.P = new Array(n);
     let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
     for (let i = 0; i < n; i++) {
-      const px = ox + (pos[i][0] - mnx) * s, py = oy + (pos[i][2] - mny) * s;
+      const px = ox + (pos[i][axH] - mnx) * s, py = oy + (pos[i][axV] - mny) * s;
       this.P[i] = [px, py];
       bx0 = Math.min(bx0, px); bx1 = Math.max(bx1, px); by0 = Math.min(by0, py); by1 = Math.max(by1, py);
     }
