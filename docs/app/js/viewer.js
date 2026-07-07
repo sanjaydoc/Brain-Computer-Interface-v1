@@ -35,9 +35,13 @@ controls.enableDamping = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.9;
 
-let neuronMesh = null, edgeLines = null, data = null;
+let neuronMesh = null, pointsMesh = null, edgeLines = null, data = null;
 let sim = null, worm = null, running = false;
 let baseCol = null;             // Float32Array n*3, out-degree ramp
+let renderMode = 'instanced';   // 'instanced' (spheres, small) | 'points' (GPU, LOD)
+let colorAttr = null;           // Points color buffer (LOD path)
+const LOD_THRESHOLD = 8000;     // above this, render as GPU points + sampled edges
+const MAX_EDGES = 120000;       // cap rendered edge segments for large connectomes
 const homeTarget = new THREE.Vector3();
 const HOME = [10, 55, 215];
 
@@ -93,11 +97,11 @@ function loadConnectome(val) {
 loadConnectome('celegans');
 
 function disposeScene() {
-  for (const o of [neuronMesh, edgeLines]) {
+  for (const o of [neuronMesh, pointsMesh, edgeLines]) {
     if (!o) continue;
     scene.remove(o); o.geometry.dispose(); o.material.dispose();
   }
-  neuronMesh = edgeLines = null;
+  neuronMesh = pointsMesh = edgeLines = colorAttr = null;
 }
 
 function build(d) {
@@ -116,28 +120,54 @@ function build(d) {
   const S = 170 / extent;
   const P = pos.map(p => [(p[1] - center[1]) * S, (p[2] - center[2]) * S, (p[0] - center[0]) * S]);
 
+  const n = d.n_neurons;
   const maxDeg = Math.max(1, ...d.outdeg);
-  baseCol = new Float32Array(d.n_neurons * 3);
-
-  const geo = new THREE.SphereGeometry(1.6, 14, 12);
-  const mat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.0 });
-  neuronMesh = new THREE.InstancedMesh(geo, mat, d.n_neurons);
-  const dummy = new THREE.Object3D(), col = new THREE.Color();
-  for (let i = 0; i < d.n_neurons; i++) {
-    dummy.position.set(P[i][0], P[i][1], P[i][2]); dummy.updateMatrix();
-    neuronMesh.setMatrixAt(i, dummy.matrix);
+  baseCol = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
     const [r, g, b] = ramp(d.outdeg[i] / maxDeg);
     baseCol[i * 3] = r; baseCol[i * 3 + 1] = g; baseCol[i * 3 + 2] = b;
-    neuronMesh.setColorAt(i, col.setRGB(r, g, b));
   }
-  neuronMesh.instanceMatrix.needsUpdate = true;
-  scene.add(neuronMesh);
 
+  renderMode = n > LOD_THRESHOLD ? 'points' : 'instanced';
+  if (renderMode === 'instanced') {
+    // small connectome: shaded instanced spheres (click-to-inspect works)
+    const geo = new THREE.SphereGeometry(1.6, 14, 12);
+    const mat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.0 });
+    neuronMesh = new THREE.InstancedMesh(geo, mat, n);
+    const dummy = new THREE.Object3D(), col = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      dummy.position.set(P[i][0], P[i][1], P[i][2]); dummy.updateMatrix();
+      neuronMesh.setMatrixAt(i, dummy.matrix);
+      neuronMesh.setColorAt(i, col.setRGB(baseCol[i * 3], baseCol[i * 3 + 1], baseCol[i * 3 + 2]));
+    }
+    neuronMesh.instanceMatrix.needsUpdate = true;
+    scene.add(neuronMesh);
+  } else {
+    // LOD path: GPU point sprites — renders 100k+ neurons smoothly
+    const gpos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { gpos[i * 3] = P[i][0]; gpos[i * 3 + 1] = P[i][1]; gpos[i * 3 + 2] = P[i][2]; }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(gpos, 3));
+    colorAttr = new THREE.BufferAttribute(new Float32Array(baseCol), 3);
+    g.setAttribute('color', colorAttr);
+    const size = n > 80000 ? 1.4 : 2.2;
+    pointsMesh = new THREE.Points(g, new THREE.PointsMaterial({ size, vertexColors: true, sizeAttenuation: true }));
+    scene.add(pointsMesh);
+  }
+
+  // edges — sampled for large connectomes so we never draw millions of segments
+  const E = d.edges.length;
+  const stride = E > MAX_EDGES ? Math.ceil(E / MAX_EDGES) : 1;
+  const m = Math.ceil(E / stride);
+  const verts = new Float32Array(m * 6);
+  let w = 0;
+  for (let e = 0; e < E; e += stride) {
+    const i = d.edges[e][0], j = d.edges[e][1];
+    verts.set([P[i][0], P[i][1], P[i][2], P[j][0], P[j][1], P[j][2]], w * 6); w++;
+  }
   const eg = new THREE.BufferGeometry();
-  const verts = new Float32Array(d.edges.length * 6);
-  d.edges.forEach(([i, j], e) => verts.set([P[i][0], P[i][1], P[i][2], P[j][0], P[j][1], P[j][2]], e * 6));
-  eg.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-  edgeLines = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: 0x333340, transparent: true, opacity: 0.14 }));
+  eg.setAttribute('position', new THREE.BufferAttribute(verts.subarray(0, w * 6), 3));
+  edgeLines = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: 0x333340, transparent: true, opacity: renderMode === 'points' ? 0.06 : 0.14 }));
   scene.add(edgeLines);
 
   sim = new BrainSim(d);
@@ -154,14 +184,22 @@ function build(d) {
 const col = new THREE.Color();
 function updateNeuronColors() {
   const act = sim.act, n = sim.n;
+  if (renderMode === 'points') {
+    const arr = colorAttr.array;
+    for (let i = 0; i < n; i++) {
+      const a = Math.min(1, act[i] * 6), b = i * 3;
+      arr[b] = baseCol[b] * (1 - a) + 1.0 * a;
+      arr[b + 1] = baseCol[b + 1] * (1 - a) + 0.86 * a;
+      arr[b + 2] = baseCol[b + 2] * (1 - a) + 0.25 * a;
+    }
+    colorAttr.needsUpdate = true;
+    return;
+  }
   for (let i = 0; i < n; i++) {
     const a = Math.min(1, act[i] * 6);
-    // idle → base out-degree color; firing → hot white-orange
-    col.setRGB(
-      baseCol[i * 3] * (1 - a) + 1.0 * a,
+    col.setRGB(baseCol[i * 3] * (1 - a) + 1.0 * a,
       baseCol[i * 3 + 1] * (1 - a) + 0.86 * a,
-      baseCol[i * 3 + 2] * (1 - a) + 0.25 * a
-    );
+      baseCol[i * 3 + 2] * (1 - a) + 0.25 * a);
     neuronMesh.setColorAt(i, col);
   }
   neuronMesh.instanceColor.needsUpdate = true;
