@@ -112,6 +112,12 @@ export function renderWaves(el) {
   };
 
   canvas.addEventListener('click', (e) => { const r = canvas.getBoundingClientRect(); bench && bench.aimAt(e.clientX - r.left, e.clientY - r.top); });
+  canvas.addEventListener('wheel', (e) => {   // mouse-scroll zoom toward the cursor
+    if (!bench) return;
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    bench.zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
   el.querySelector('#wv-fire').addEventListener('click', () => fireMode(mode()));
   el.querySelector('#wv-reset').addEventListener('click', () => bench && bench.clearCoverage());
   el.querySelector('#wv-combine').addEventListener('click', () => {
