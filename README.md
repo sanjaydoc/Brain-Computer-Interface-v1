@@ -306,13 +306,14 @@ Brain-Computer-Interface-v1/
 
 ## 🧭 Roadmap
 
-- [x] **P0 — Spine** · config + registry, connectome SoA/sparse model, synthetic source, **10M-neuron proof**
-- [x] **P1 — Worm** · real *C. elegans* connectome (Cook 2019 + OpenWorm) loads + **renders in 3D**
-- [x] **P2 — Simulation** · Python LIF engine + sparse stepper; **locomotion emerges from the connectome** (17 tests)
-- [x] **P3 — Live** · FastAPI + WebSocket streaming (`bci serve`); browser demo-mode mirror
-- [x] **P4 — Loop** · sonogenetic write + neural-dust read contracts + stimulus environment (the four-part loop)
-- [x] **P5 — Cockpit** · all GUI panels interactive: **Biomolecules** (generate → test), **Scanner** (ultrasound write + dust read, live), **System** (live monitor + brain-tuning sliders) + CI
-- [x] **Part 1 wired** · **De-Novo-LLM** integrated — generate biomolecules → cast as sonogenetic channels → **test on the connectome** (local GPU / NVIDIA NIM / bundled fallback)
+- ✅ **P0 — Spine** · config + registry, connectome SoA/sparse model, synthetic source, **10M-neuron proof**
+- ✅ **P1 — Worm** · real *C. elegans* connectome (Cook 2019 + OpenWorm) loads + **renders in 3D**
+- ✅ **P2 — Simulation** · Python LIF engine + sparse stepper; **locomotion emerges from the connectome**
+- ✅ **P3 — Live** · FastAPI + WebSocket streaming (`bci serve`); browser demo-mode mirror
+- ✅ **P4 — Loop** · sonogenetic write + neural-dust read contracts + stimulus environment (the four-part loop)
+- ✅ **P5 — Cockpit** · all GUI panels interactive: **Biomolecules** (generate → test), **Scanner** (ultrasound write + dust read, live), **System** (live monitor + brain-tuning sliders) + CI
+- ✅ **Part 1 wired** · **De-Novo-LLM** integrated — generate biomolecules → cast as sonogenetic channels → **test on the connectome** (local GPU / NVIDIA NIM / bundled fallback)
+- ✅ **Hodgkin–Huxley model** · biophysical neuron model, drop-in behind the same `NeuronModel` interface
 
 **v1 complete — the full four-part loop is real.** Next horizon: the scale ladder — MICrONS mouse column (LOD rendering), GPU stepper, then mesoscale.
 
