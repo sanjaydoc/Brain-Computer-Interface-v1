@@ -36,6 +36,19 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.9;
+controls.enableZoom = true;          // mouse-scroll / pinch zoom on the 3D brain
+controls.zoomSpeed = 1.0;
+controls.minDistance = 30;
+controls.maxDistance = 900;
+// zoom in/out about the orbit target (used by the +/− buttons; scroll uses OrbitControls)
+function zoomCamera(factor) {
+  camera.position.sub(controls.target).multiplyScalar(factor).add(controls.target);
+  const d = camera.position.distanceTo(controls.target);
+  if (d < controls.minDistance || d > controls.maxDistance) {   // clamp
+    camera.position.sub(controls.target).multiplyScalar(1 / factor).add(controls.target);
+  }
+  controls.update();
+}
 
 let neuronMesh = null, pointsMesh = null, edgeLines = null, data = null;
 let sim = null, avatar = null, avatarKind = null, running = false;
@@ -455,6 +468,8 @@ $('spin').addEventListener('change', e => { controls.autoRotate = e.target.check
 $('edges').addEventListener('change', e => { if (edgeLines) edgeLines.visible = e.target.checked; });
 $('edgeop').addEventListener('input', e => { if (edgeLines) edgeLines.material.opacity = e.target.value / 100; });
 $('reset').addEventListener('click', () => { camera.position.set(...HOME); controls.target.copy(homeTarget); });
+$('cam-zin').addEventListener('click', () => zoomCamera(0.8));
+$('cam-zout').addEventListener('click', () => zoomCamera(1.25));
 
 // connectome selector — rebuild the twin, and return to the 3D view
 const cxSel = $('cx-select');

@@ -2,7 +2,9 @@
 // Live mode calls the Python backend (/api/electronics, ported from inventor-studio-v3).
 // Demo mode (hosted, no backend) runs the same rule-based composer in the browser, so the
 // tab works standalone. Renders an SVG schematic (components placed by x/y, wires coloured
-// by power/data) plus the bill of materials.
+// by power/data) plus the bill of materials, and a generated PCB layout. Scroll to zoom.
+
+import { WB } from './workbench.js';
 
 const COLS = { POWER: 50, ACTUATOR: 280, MCU: 510, SENSOR: 740, MODULE: 970, DISPLAY: 970 };
 const CAT_COLOR = { MCU: '#2b2b33', POWER: '#0e9f6e', SENSOR: '#2f6fed', ACTUATOR: '#d98218', DISPLAY: '#7a5bd0', MODULE: '#6b7280' };
@@ -123,6 +125,72 @@ function schematicSVG(circuit) {
   return `<svg class="sch-svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet">${edges}${boxes}</svg>`;
 }
 
+// PCB auto-layout: place components on a board grid, give each a footprint with pads, and
+// route each net as a 2-layer orthogonal copper trace (power = wide, data = thin). A real
+// (if simple) place-and-route from the same components + connections the schematic uses.
+function pcbSVG(circuit) {
+  const comps = circuit.components, n = comps.length;
+  const cols = Math.max(2, Math.ceil(Math.sqrt(n))), rows = Math.ceil(n / cols);
+  const cell = 74, mgn = 34, boardW = mgn * 2 + cols * cell, boardH = mgn * 2 + rows * cell;
+  const nodes = {};
+  const list = comps.map((c, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const pins = Math.min(8, Math.max(2, (c.pins || []).length));
+    const fw = Math.max(36, 8 + pins * 7), fh = 30;
+    const bx = mgn + col * cell + (cell - fw) / 2, by = mgn + row * cell + (cell - fh) / 2;
+    const pads = Array.from({ length: pins }, (_, k) => ({ x: bx + fw * (k + 1) / (pins + 1), y: by + fh + 3 }));
+    const node = { ...c, bx, by, fw, fh, pads, cx: bx + fw / 2, cy: by + fh / 2 };
+    nodes[c.id] = node; return node;
+  });
+  const nearestPad = (node, toward) => node.pads.reduce((best, p) =>
+    (p.x - toward.cx) ** 2 + (p.y - toward.cy) ** 2 < (best.x - toward.cx) ** 2 + (best.y - toward.cy) ** 2 ? p : best, node.pads[0]);
+  const traces = circuit.connections.map((e, idx) => {
+    const a = nodes[e.from], b = nodes[e.to]; if (!a || !b) return '';
+    const pa = nearestPad(a, b), pb = nearestPad(b, a);
+    const col = e.type === 'power' ? '#e0654a' : '#43a7ff', w = e.type === 'power' ? 3.2 : 2;
+    const midY = (pa.y + pb.y) / 2 + (idx % 2 ? 9 : -9);   // 2-layer offset so traces don't overlap
+    return `<path d="M ${pa.x} ${pa.y} L ${pa.x} ${midY} L ${pb.x} ${midY} L ${pb.x} ${pb.y}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" opacity="0.9"/>`;
+  }).join('');
+  const pads = list.map((nd) => nd.pads.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="2.7" fill="#e8c24a"/>`).join('')).join('');
+  const foot = list.map((nd) => `<g>
+    <rect x="${nd.bx}" y="${nd.by}" width="${nd.fw}" height="${nd.fh}" rx="3" fill="#0c3b2e" stroke="#e8c24a" stroke-width="1"/>
+    <text x="${nd.cx}" y="${nd.by + nd.fh / 2 + 3.5}" text-anchor="middle" font-size="10" font-weight="700" fill="#e6f6ee" font-family="ui-monospace,monospace">${nd.id}</text></g>`).join('');
+  const holes = [[mgn / 2, mgn / 2], [boardW - mgn / 2, mgn / 2], [mgn / 2, boardH - mgn / 2], [boardW - mgn / 2, boardH - mgn / 2]]
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.5" fill="#0a2a20" stroke="#e8c24a" stroke-width="1.2"/>`).join('');
+  return `<svg class="sch-svg" viewBox="-12 -12 ${boardW + 24} ${boardH + 30}" preserveAspectRatio="xMidYMid meet">
+    <rect x="0" y="0" width="${boardW}" height="${boardH}" rx="7" fill="#0e4d3a"/>
+    <rect x="5" y="5" width="${boardW - 10}" height="${boardH - 10}" rx="4" fill="none" stroke="#1c6b52"/>
+    ${traces}${pads}${foot}${holes}
+    <text x="${boardW / 2}" y="${boardH + 16}" text-anchor="middle" font-size="11" fill="#7a9a8c" font-family="ui-sans-serif,system-ui">${boardW} × ${boardH} mm · ${circuit.connections.length} nets · 2-layer</text></svg>`;
+}
+
+// mouse-scroll zoom (toward the cursor) + drag-pan on an SVG, by mutating its viewBox
+export function attachPanZoom(stage) {
+  const svg = stage.querySelector('svg'); if (!svg) return;
+  let vb = (svg.getAttribute('viewBox') || '0 0 100 100').split(/\s+/).map(Number);
+  const base = [...vb], apply = () => svg.setAttribute('viewBox', vb.join(' '));
+  svg.style.cursor = 'grab';
+  svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect();
+    const mx = (e.clientX - r.left) / r.width, my = (e.clientY - r.top) / r.height;
+    const px = vb[0] + mx * vb[2], py = vb[1] + my * vb[3];
+    let nw = vb[2] * (e.deltaY < 0 ? 0.86 : 1.16);
+    nw = Math.max(base[2] * 0.12, Math.min(base[2] * 1.7, nw));
+    const nh = nw * (base[3] / base[2]);
+    vb = [px - mx * nw, py - my * nh, nw, nh]; apply();
+  }, { passive: false });
+  let drag = null;
+  svg.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, vb: [...vb] }; svg.setPointerCapture(e.pointerId); svg.style.cursor = 'grabbing'; });
+  svg.addEventListener('pointermove', (e) => {
+    if (!drag) return; const r = svg.getBoundingClientRect();
+    vb[0] = drag.vb[0] - (e.clientX - drag.x) / r.width * vb[2];
+    vb[1] = drag.vb[1] - (e.clientY - drag.y) / r.height * vb[3]; apply();
+  });
+  const end = () => { drag = null; svg.style.cursor = 'grab'; };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+}
+
 export async function renderElectronics(el) {
   const live = await detectLive();
   const badge = live ? `<span class="chip allow">live · ${live.llm ? 'LLM' : 'backend'}</span>` : '<span class="chip">demo · in-browser composer</span>';
@@ -139,28 +207,35 @@ export async function renderElectronics(el) {
       <label class="field">concept
         <input id="el-concept" type="text" value="EEG BCI headset with 8 electrodes + stimulator" style="text-transform:none" /></label>
       <div class="muted small" style="margin:-.2rem 0 .1rem">try: “ESP32 neural node with IMU + OLED”, “motor driver robot”, “ECG monitor”</div>
-      <button class="btn act" id="el-gen">▶ Generate schematic</button>
+      <button class="btn act" id="el-gen">▶ Generate</button>
       <div class="seg" style="margin-top:.2rem">
-        <button class="seg-btn active" data-b="auto">schematic</button>
-        <button class="seg-btn" data-b="pcb">PCB (soon)</button>
+        <button class="seg-btn active" data-b="schematic">schematic</button>
+        <button class="seg-btn" data-b="pcb">PCB layout</button>
       </div>
-      <div class="muted small" id="el-note">Ported from <b>inventor-studio-v3</b> (Node → Python). ${live ? 'Live LLM generation.' : 'Demo runs the rule-based composer in your browser; the LLM path activates with a backend + API key.'}</div>
+      <div class="muted small" id="el-note">Ported from <b>inventor-studio-v3</b> (Node → Python). ${live ? 'Live LLM generation.' : 'Demo runs the rule-based composer in your browser; the LLM path activates with a backend + API key.'} <b>Scroll to zoom</b>, drag to pan.</div>
     </div>`;
 
   const stage = el.querySelector('#el-stage');
+  let circuit = null, view = 'schematic';
+
+  const renderView = () => {
+    if (!circuit) return;
+    stage.innerHTML = view === 'pcb' ? pcbSVG(circuit) : schematicSVG(circuit);
+    attachPanZoom(stage);
+  };
+
   const run = async () => {
     const concept = el.querySelector('#el-concept').value.trim();
     if (!concept) return;
     stage.innerHTML = '<div class="muted" style="margin:auto">Generating…</div>';
-    let circuit;
     try {
       if (live) circuit = await fetch('/api/electronics/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept }),
       }).then((r) => r.json());
       else circuit = sanitize(composeCircuit(concept));
     } catch { circuit = sanitize(composeCircuit(concept)); }
-
-    stage.innerHTML = schematicSVG(circuit);
+    WB.circuit = circuit;
+    renderView();
     el.querySelector('#el-title').textContent = circuit.title || concept.slice(0, 40);
     const bom = circuit.bom || circuit.components;
     el.querySelector('#el-bom').innerHTML = `<table class="mini"><tbody>${bom.map((c) =>
@@ -173,7 +248,7 @@ export async function renderElectronics(el) {
   el.querySelector('#el-concept').addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
   el.querySelectorAll('.seg-btn').forEach((b) => b.addEventListener('click', () => {
     el.querySelectorAll('.seg-btn').forEach((x) => x.classList.toggle('active', x === b));
-    if (b.dataset.b === 'pcb') el.querySelector('#el-note').innerHTML = 'PCB place & route lands next — the schematic + BOM feed it.';
+    view = b.dataset.b; renderView();
   }));
   run();   // generate the default concept immediately
 }
