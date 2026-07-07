@@ -26,6 +26,29 @@ def test_lif_fires_under_drive_and_refracts():
     assert (m.activity >= 0).all()
 
 
+def test_hodgkin_huxley_produces_action_potentials():
+    m = neuron_models.create("hodgkin_huxley", n=3)
+    vmax, spikes = -100.0, 0
+    for _ in range(200):
+        s = m.step(np.full(3, 0.5, dtype=np.float32), dt=1.0)
+        vmax = max(vmax, float(m.v.max()))
+        spikes += int(s[0])
+    assert vmax > 20.0        # a real action potential overshoots well above 0 mV
+    assert spikes >= 5        # repetitive firing under sustained current
+
+
+def test_hodgkin_huxley_is_a_drop_in_engine_model():
+    from bci.simulation import Engine
+    c = sources.create("celegans").load()
+    eng = Engine(c, neuron_impl="hodgkin_huxley", seed=1)
+    for _ in range(150):
+        eng.step()
+    eng.inject_role("rev", 3.0)
+    for _ in range(60):
+        eng.step()
+    assert eng.locomotion() < -0.05    # reversal emerges under HH too
+
+
 # --- stepper: row normalization ---------------------------------------------
 def test_row_normalization_bounds_input():
     c = sources.create("synthetic", n=200, avg_degree=10, seed=0).load()

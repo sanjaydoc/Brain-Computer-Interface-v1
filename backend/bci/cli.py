@@ -29,7 +29,7 @@ def _sources() -> None:
     print("connectome sources:", ", ".join(sources.keys()))
 
 
-def _run(impl: str, steps: int) -> None:
+def _run(impl: str, steps: int, neuron: str) -> None:
     """Run the full four-part loop headless and show emergent locomotion."""
     from .runtime import Runtime
 
@@ -37,8 +37,8 @@ def _run(impl: str, steps: int) -> None:
         {"t": 120, "role": "fwd", "amount": 3.4},   # drive forward command
         {"t": 360, "role": "rev", "amount": 3.4},   # drive reverse command
     ]
-    rt = Runtime.build(connectome_impl=impl, events=events)
-    print(f"running {impl}: {rt.engine.n} neurons — driving fwd@120, rev@360\n")
+    rt = Runtime.build(connectome_impl=impl, engine_params={"neuron_impl": neuron}, events=events)
+    print(f"running {impl} ({neuron}): {rt.engine.n} neurons — driving fwd@120, rev@360\n")
     print(f"{'t':>5} {'firing':>7} {'locomotion':>11}  behavior")
     for _ in range(steps):
         rt.step()
@@ -61,6 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     p_run = sub.add_parser("run", help="run the full four-part loop headless")
     p_run.add_argument("--connectome", default="celegans", help="connectome source (default: celegans)")
     p_run.add_argument("--steps", type=int, default=520, help="number of steps")
+    p_run.add_argument("--neuron", default="lif", choices=["lif", "hodgkin_huxley"], help="neuron model")
 
     p_serve = sub.add_parser("serve", help="serve the REST + WebSocket live API")
     p_serve.add_argument("--host", default="127.0.0.1")
@@ -72,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.cmd == "sources":
         _sources()
     elif args.cmd == "run":
-        _run(args.connectome, args.steps)
+        _run(args.connectome, args.steps, args.neuron)
     elif args.cmd == "serve":
         import uvicorn
 
