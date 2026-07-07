@@ -34,6 +34,18 @@
 
   <div class="tabs wrap">
     <button class="tab active" data-tab="brain">🕸️ Brain template</button>
+    <select id="cx-select" class="cx-select" title="Choose a connectome to load">
+      <optgroup label="Available now">
+        <option value="celegans">C. elegans · worm · 302</option>
+        <option value="synthetic:1000">Synthetic · 1,000</option>
+        <option value="synthetic:5000">Synthetic · 5,000</option>
+      </optgroup>
+      <optgroup label="Coming soon — needs LOD renderer (Rung 2)">
+        <option value="microns" disabled>MICrONS mouse cortex · ~200k</option>
+        <option value="drosophila" disabled>Drosophila brain · ~140k</option>
+        <option value="mouse" disabled>Mouse whole-brain · ~71M</option>
+      </optgroup>
+    </select>
     <button class="tab" data-tab="biomolecules">🧬 Biomolecules</button>
     <button class="tab" data-tab="scanner">🔊 Scanner</button>
     <button class="tab" data-tab="venv">🌐 Virtual env</button>

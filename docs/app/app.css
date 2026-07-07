@@ -12,6 +12,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   padding: .34rem .9rem; cursor: pointer;
 }
 .tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.cx-select {
+  font-family: var(--sans); font-size: .82rem; font-weight: 600; color: var(--ink);
+  background: var(--paper); border: 1.5px solid var(--rule); border-radius: var(--pill);
+  padding: .3rem .7rem; cursor: pointer; margin-right: .3rem;
+}
 .tab:disabled { opacity: .45; cursor: not-allowed; }
 .tab-note { font-size: .8rem; margin-left: .4rem; }
 
