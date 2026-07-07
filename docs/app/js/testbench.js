@@ -226,6 +226,28 @@ export class TestBench {
   startCoverage() { this._track = true; this.reached = new Set(); }
   coverage() { return this._track && this.sim.n ? this.reached.size / this.sim.n : 0; }
   clearCoverage() { if (this.reached) this.reached.clear(); }
+
+  // Different wave MODALITIES reach different tissue — that's why one alone leaves blind spots:
+  //   focal    tight spot at the focus (focused ultrasound: deep but small)
+  //   volume   uniform through the whole volume (radio/MRI, gamma: penetrating)
+  //   surface  the outer shell only (infrared/optical: cortical surface, blind to depth)
+  //   column   a penetrating band through the focus (X-ray)
+  setReach(reach, frac) {
+    const P = this.P, n = P.length, k = Math.max(4, Math.floor(n * frac));
+    const [x0, x1, y0, y1] = this.bbox, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    let idxs;
+    if (reach === 'volume') {
+      const step = Math.max(1, Math.round(n / k)); idxs = [];
+      for (let i = 0; i < n; i += step) idxs.push(i);
+    } else if (reach === 'surface') {
+      idxs = P.map((p, i) => [(p[0] - cx) ** 2 + (p[1] - cy) ** 2, i]).sort((a, b) => b[0] - a[0]).slice(0, k).map((x) => x[1]);
+    } else if (reach === 'column') {
+      idxs = P.map((p, i) => [Math.abs(p[0] - this.focus[0]), i]).sort((a, b) => a[0] - b[0]).slice(0, k).map((x) => x[1]);
+    } else {   // focal
+      idxs = P.map((p, i) => [(p[0] - this.focus[0]) ** 2 + (p[1] - this.focus[1]) ** 2, i]).sort((a, b) => a[0] - b[0]).slice(0, k).map((x) => x[1]);
+    }
+    this.expr = idxs.map((i) => [i, 1]); this.exprIdx = idxs;
+  }
   liveStats() {
     let f = 0, m = 0; for (let i = 0; i < this.sim.n; i++) { if (this.sim.act[i] > 0.1) f++; m += this.sim.act[i]; }
     return { motesActive: f, backscatter: +(m / this.sim.n).toFixed(3), readout: this.readout.at(-1) || 0 };
