@@ -218,6 +218,14 @@ Rung 1 ships with the repo. The Rung-2 brains are **fetched on your own machine*
 hosts — CAVE and FlyWire — aren't reachable from the hosted demo); once cached they load from
 the control-plane dropdown and render with automatic level-of-detail.
 
+<div align="center">
+
+![MICrONS mouse visual cortex — 2,220 proofread neurons, 187,613 real synapses, rendered and simulated in the browser](docs/media/microns_cortex.png)
+
+**Rung 2a — real MICrONS mouse V1** · 2,220 proofread neurons and **187,613 real electron-microscopy synapses** from the Allen Institute's `minnie65_public` release, rendered and simulated live in the browser. Every edge is a synapse a human traced; the warm neurons are firing under the connectome's own dynamics.
+
+</div>
+
 **Rung 3** is where the ladder reaches millions. No one has an every-synapse map of a whole
 brain, so this rung is *statistical*: it turns the Allen mesoscale **region graph** into a
 neuron-level connectome at **any N** — distributing neurons across regions and wiring them by
