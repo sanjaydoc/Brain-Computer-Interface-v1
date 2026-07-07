@@ -111,6 +111,11 @@ function showFetchMsg(val) {
 }
 
 function loadConnectome(val) {
+  // Stop the outgoing sim and clear its scene immediately so the render/step loop doesn't
+  // starve the incoming connectome's load (matters when switching away from a big brain like
+  // the fly). build() rebuilds the scene; disposeScene() is null-safe to call twice.
+  sim = null;
+  disposeScene();
   if (val === 'celegans') {
     fetch('./data/celegans.json').then(r => r.json())
       .then(d => build({ ...d, name: 'C. elegans' }))
@@ -211,6 +216,9 @@ function build(d) {
     avatarKind = kind;
     window.__avatar = avatar;
     setVenvNote(kind);
+    // show the stimulus controls the loaded brain can actually drive
+    $('worm-stim').hidden = sim.hasFlight;
+    $('fly-stim').hidden = !sim.hasFlight;
   }
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
@@ -256,8 +264,10 @@ function driveAvatar() {
     smThrust = smThrust * 0.9 + thrust * 0.1;
     smYaw = smYaw * 0.88 + yaw * 0.12;
     const flying = smThrust > 0.008;
-    const speed = flying ? (0.5 + 46 * smThrust) : 0;     // px/frame from motor drive
-    avatar.frame({ thrust: speed, yaw: smYaw * 7, activity: smAct, wingbeat: smThrust * 10 });
+    // clamp so a stimulus burst is a brisk maneuver, not a teleport/pirouette
+    const speed = flying ? Math.min(5.5, 0.5 + 34 * smThrust) : 0;   // px/frame from motor drive
+    const turn = Math.max(-0.13, Math.min(0.13, smYaw * 6));         // rad/frame bank
+    avatar.frame({ thrust: speed, yaw: turn, activity: smAct, wingbeat: Math.min(1.2, smThrust * 10) });
     if (!flying) { loco.textContent = 'hovering'; loco.className = 'loco'; }
     else if (smYaw > 0.006) { loco.textContent = 'banking right ↻'; loco.className = 'loco fwd'; }
     else if (smYaw < -0.006) { loco.textContent = 'banking left ↺'; loco.className = 'loco rev'; }
@@ -336,6 +346,12 @@ const stimBtn = (id, role) => $(id).addEventListener('click', () => { if (sim) {
 stimBtn('stim-post', 'touchPost');
 stimBtn('stim-fwd', 'fwd');
 stimBtn('stim-rev', 'rev');
+
+// fly piloting — drive the real descending / motor neurons the flight is decoded from
+const flyBtn = (id, role) => $(id).addEventListener('click', () => { if (sim) { sim.stimulateFly(role); if (!running) toggleRun(true); } });
+flyBtn('fly-thrust', 'thrust');
+flyBtn('fly-left', 'left');
+flyBtn('fly-right', 'right');
 
 // PLM is the teaching moment: reveal *why* posterior touch barely moves the worm.
 $('stim-post').addEventListener('click', () => {
