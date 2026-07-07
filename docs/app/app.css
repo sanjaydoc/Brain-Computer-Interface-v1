@@ -48,15 +48,18 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 :root[data-theme="dark"] .stage-canvas { background: #0f0f11; }
 /* segmented 2D / 3D view toggle inside a floating card */
 .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: var(--pill);
-  overflow: hidden; margin: 0 0 .5rem; align-self: flex-start; }
+  overflow: hidden; margin: .15rem 0 .5rem; align-self: flex-start; flex: 0 0 auto; }
 .seg-btn { font-family: var(--sans); font-size: .75rem; font-weight: 600; color: var(--ink-2);
-  background: var(--paper); border: 0; padding: .3rem .75rem; cursor: pointer; }
+  background: var(--paper); border: 0; padding: .32rem .8rem; cursor: pointer;
+  line-height: 1.5; white-space: nowrap; }
 .seg-btn.active { background: var(--ink); color: #fff; }
-.zoom-row { display: flex; align-items: center; gap: .35rem; font-size: .72rem;
-  text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .5rem; }
-.zoom-btn { font-family: var(--sans); font-weight: 700; font-size: .9rem; line-height: 1; color: var(--ink);
-  background: var(--paper); border: 1px solid var(--hair); border-radius: 7px; padding: .18rem .5rem; cursor: pointer; }
+.zoom-row { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; flex: 0 0 auto;
+  font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .5rem; }
+.zoom-btn { font-family: var(--sans); font-weight: 700; font-size: .9rem; line-height: 1.4; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--hair); border-radius: 7px; padding: .1rem .55rem; cursor: pointer; }
 .zoom-btn:hover { border-color: var(--ink); }
+/* keep the badge chip on the eyebrow line so it never overlaps the toggle below it */
+.overlay .eyebrow .chip { vertical-align: middle; }
 
 /* roadmap scaffold cards (Physics / Waves / Electronics / Hardware / Fusion / 3D print) */
 .overlay.scaffold { top: 18px; left: 18px; max-width: 440px; }
