@@ -70,6 +70,11 @@
         <div class="eyebrow" style="margin-top:.3rem">write a stimulus</div>
         <div class="stim-group muted">sensory (acts through the wiring — subtle)</div>
         <button class="btn act" id="stim-post" title="Stimulates the posterior touch-sensory neurons (PLML / PLMR / PVM). Their signal must propagate through the connectome to the command circuit — a real but weak, diffuse effect. Watch the brain light up; the worm nudges only slightly, because in the real wiring PLM feeds both forward and reverse command neurons (they partly cancel).">Posterior touch (PLM) · sensory</button>
+        <div class="stim-note small" id="plm-note" hidden>
+          Notice PLM connects to <b>both</b> the forward (PVC) and the reverse (AVA/AVD)
+          command neurons — in roughly balanced amounts. Since locomotion = forward − reverse,
+          the two partly cancel, leaving only a small net signal.
+        </div>
         <div class="stim-group muted">command (drives the output stage — strong)</div>
         <button class="btn act" id="stim-fwd" title="Directly drives the forward command neurons (AVB / PVC) — the output stage the worm's crawl is decoded from. Strong, immediate forward crawl.">Drive forward cmd (AVB)</button>
         <button class="btn act" id="stim-rev" title="Directly drives the reverse command neurons (AVA / AVE / AVD). Strong, immediate reversal.">Drive reverse cmd (AVA)</button>
