@@ -33,26 +33,35 @@ cd Brain-Computer-Interface-v1
 
 ### Windows (PowerShell)
 
-PowerShell often blocks venv activation scripts, so the simplest path is to **call the
-venv's Python directly** (no activation, no policy change):
+PowerShell blocks venv activation scripts by default. Allow them for this window only
+(note the exact syntax — `Bypass` is the *value* of `-ExecutionPolicy`), then activate:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev,api]"
-.\.venv\Scripts\python.exe -m bci.cli serve
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev,api]"
+bci serve
 ```
 
-Then open **http://localhost:8000/app/**
+Your prompt shows `(.venv)` once activated. `-Scope Process` only affects the current
+window and resets when you close it. Then open **http://localhost:8000/app/**
 
-> Prefer to activate the venv instead? Allow scripts for this terminal only, then activate:
+> **Don't want to activate?** Skip the two policy/activation lines and call the venv's
+> Python directly — this always works, no policy change:
 > ```powershell
-> Set-ExecutionPolicy -Scope Process -Bypass
-> .\.venv\Scripts\Activate.ps1
+> python -m venv .venv
+> .\.venv\Scripts\python.exe -m pip install -e ".[dev,api]"
+> .\.venv\Scripts\python.exe -m bci.cli serve
+> ```
+
+> **Command Prompt (cmd) instead of PowerShell?** No policy issue there:
+> ```cmd
+> python -m venv .venv
+> .venv\Scripts\activate.bat
 > pip install -e ".[dev,api]"
 > bci serve
 > ```
-> `-Scope Process` only affects the current window. After activating, you can use the short
-> `bci ...` commands instead of `.\.venv\Scripts\python.exe -m bci.cli ...`.
 
 ### macOS / Linux
 
@@ -162,7 +171,8 @@ Generation backends are chosen automatically: **local GPU → NVIDIA NIM → bun
 
 | Symptom | Fix |
 |---------|-----|
-| `running scripts is disabled on this system` (PowerShell) | Use `.\.venv\Scripts\python.exe -m ...` (no activation), or run `Set-ExecutionPolicy -Scope Process -Bypass` first. |
+| `running scripts is disabled on this system` (PowerShell) | Run `Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process` first, then `.\.venv\Scripts\Activate.ps1`. Or skip activation entirely: `.\.venv\Scripts\python.exe -m ...`. |
+| `A parameter cannot be found that matches parameter name 'Bypass'` | Wrong order — it's `Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process` (`Bypass` is the value, not a flag). |
 | `The token '&&' is not a valid statement separator` | Old PowerShell — run each command on its own line (don't chain with `&&`). |
 | `bci` not found | Use `python -m bci.cli ...` (or `.\.venv\Scripts\python.exe -m bci.cli ...` on Windows). |
 | Port 8000 in use | `bci serve --port 8080` |
