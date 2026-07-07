@@ -7,6 +7,7 @@ import { OrbitControls } from './lib/OrbitControls.js';
 import { BrainSim } from './sim.js';
 import { WormViz } from './worm2d.js';
 import { FlyViz } from './fly2d.js';
+import { ActivityViz } from './activity2d.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -210,15 +211,18 @@ function build(d) {
   window.__connectome = d;     // exposed for the molecular assay
   // Pick the avatar the loaded brain can actually drive: the fly's descending motor pathway
   // flies a fly; the worm's command circuit crawls a worm.
-  const kind = sim.hasFlight ? 'fly' : 'worm';
+  const kind = sim.hasFlight ? 'fly' : (sim.hasBody ? 'worm' : 'cortex');
   if (avatarKind !== kind || !avatar) {
-    avatar = sim.hasFlight ? new FlyViz($('worm')) : new WormViz($('worm'));
+    avatar = kind === 'fly' ? new FlyViz($('worm'))
+      : kind === 'worm' ? new WormViz($('worm'))
+      : new ActivityViz($('worm'), sim.n);        // bodiless brain → activity view
     avatarKind = kind;
     window.__avatar = avatar;
     setVenvNote(kind);
     // show the stimulus controls the loaded brain can actually drive
-    $('worm-stim').hidden = sim.hasFlight;
-    $('fly-stim').hidden = !sim.hasFlight;
+    $('worm-stim').hidden = kind !== 'worm';
+    $('fly-stim').hidden = kind !== 'fly';
+    $('cortex-stim').hidden = kind !== 'cortex';
   }
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
@@ -258,7 +262,13 @@ function driveAvatar() {
   smAct = smAct * 0.9 + mean * 0.1;
 
   const loco = $('loco');
-  if (avatarKind === 'fly') {
+  if (avatarKind === 'cortex') {
+    // No body — the activity IS the behaviour: raster + population rate, live from the sim.
+    avatar.frame(sim.fired, sim.pop);
+    const pct = Math.round(sim.pop * 100);
+    loco.textContent = pct >= 1 ? `${pct}% firing` : 'quiet';
+    loco.className = 'loco' + (pct >= 3 ? ' fwd' : '');
+  } else if (avatarKind === 'fly') {
     // Flight decoded from the fly's descending + motor neurons (see sim.flight()).
     const { thrust, yaw } = sim.flight();
     smThrust = smThrust * 0.9 + thrust * 0.1;
@@ -292,13 +302,20 @@ function driveAvatar() {
 function setVenvNote(kind) {
   const note = document.querySelector('.venv-note');
   if (!note) return;
-  note.innerHTML = kind === 'fly'
-    ? `Flight is <b>decoded live from the descending + motor neurons</b> — the fly brain's real
-       motor-command output. Their firing drives thrust; left/right descending asymmetry banks
-       the turn. It emerges from simulating the FlyWire connectome — nothing is scripted.`
-    : `Locomotion is <b>decoded live from the command neurons</b> — it emerges from
-       simulating the connectome. Driving reverse (AVA) → the worm backs up; forward
-       (AVB) or posterior touch → it crawls ahead.`;
+  if (kind === 'fly') {
+    note.innerHTML = `Flight is <b>decoded live from the descending + motor neurons</b> — the fly
+      brain's real motor-command output. Their firing drives thrust; left/right descending
+      asymmetry banks the turn. It emerges from simulating the FlyWire connectome — nothing is scripted.`;
+  } else if (kind === 'cortex') {
+    note.innerHTML = `This is a slice of <b>visual cortex</b> — it has no motor output, so its
+      behaviour <i>is</i> its activity. The <b>raster</b> shows real neurons spiking over time and
+      the trace is the <b>population firing rate</b>, both emerging from the connectome. Flash a
+      visual input to watch a response ripple through the real wiring.`;
+  } else {
+    note.innerHTML = `Locomotion is <b>decoded live from the command neurons</b> — it emerges from
+      simulating the connectome. Driving reverse (AVA) → the worm backs up; forward
+      (AVB) or posterior touch → it crawls ahead.`;
+  }
 }
 
 let frame = 0;
@@ -352,6 +369,9 @@ const flyBtn = (id, role) => $(id).addEventListener('click', () => { if (sim) { 
 flyBtn('fly-thrust', 'thrust');
 flyBtn('fly-left', 'left');
 flyBtn('fly-right', 'right');
+
+// cortex — flash a spatial patch as "visual input" and watch it propagate
+$('cortex-flash').addEventListener('click', () => { if (sim) { sim.stimulatePatch(); if (!running) toggleRun(true); } });
 
 // PLM is the teaching moment: reveal *why* posterior touch barely moves the worm.
 $('stim-post').addEventListener('click', () => {

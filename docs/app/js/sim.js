@@ -36,7 +36,16 @@ export class BrainSim {
       const INH = new Set(['GABA', 'GLUT', 'GLUTAMATE']);
       data.nt.forEach((t, i) => { if (INH.has(String(t).toUpperCase())) this.sign[i] = -1; });
     } else {
-      data.ids.forEach((name, i) => { if (INHIBITORY.some((re) => re.test(name))) this.sign[i] = -1; });
+      // No neurotransmitters: fall back to (a) C. elegans GABAergic name prefixes and
+      // (b) MICrONS cortical INTERNEURON cell types (basket/bipolar/Martinotti/neurogliaform).
+      // Pyramidal cells (…P types) excite; interneurons inhibit — real cortical E/I balance,
+      // which keeps the dense cortex from saturating into a seizure.
+      const CORTEX_INHIB = new Set(['BC', 'BPC', 'MC', 'NGC']);
+      for (let i = 0; i < n; i++) {
+        const name = String(data.ids[i]);
+        const type = data.types ? String(data.types[i]) : '';
+        if (INHIBITORY.some((re) => re.test(name)) || CORTEX_INHIB.has(type)) this.sign[i] = -1;
+      }
     }
 
     // per-post synaptic normalization: divide each neuron's incoming weights by their
@@ -68,12 +77,20 @@ export class BrainSim {
       });
     }
     this.hasFlight = this.descIdx.length > 5;
+    // A brain has a "body" to drive if it has a motor read-out: the worm's command circuit
+    // or the fly's descending neurons. Cortical slices (MICrONS) / mesoscale sheets don't —
+    // they get the activity view instead of an avatar.
+    this.hasBody = this.hasFlight || (this.roleIdx.fwd && this.roleIdx.fwd.length > 0);
 
     this.tau = 20; this.vth = 1.0; this.vreset = 0; this.refrLen = 4;
     // background excitability → the network is spontaneously active, so the command
     // neurons fluctuate on their own and the worm moves from genuine connectome dynamics.
     this.bias = 0.05; this.noise = 0.05; this.stimDecay = 0.96;
     this.globalInh = 2.2; this.pop = 0; this.t = 0;
+    // A dense bodiless sheet (cortex / mesoscale) with 20% inhibition sits near-silent under
+    // the worm-tuned drive; lift the tonic excitability so the activity view shows a lively,
+    // structured resting state that an evoked "visual input" flash still stands out against.
+    if (!this.hasBody) this.bias = 0.11;
   }
 
   stimulate(indices, amount = 3.4) { for (const i of indices) if (i !== undefined) this.stim[i] += amount; }
@@ -84,6 +101,25 @@ export class BrainSim {
   stimulateFly(role, amount = 1.3) {
     const map = { thrust: this.descIdx.concat(this.motorIdx), left: this.descLeft, right: this.descRight };
     this.stimulate(map[role] || [], amount);
+  }
+
+  // Visual-response demo for a cortical slice: stimulate a compact spatial PATCH of neurons
+  // (a localized "visual input"), then watch the response propagate through the real wiring.
+  // Returns the seed index so the caller can highlight where the input landed.
+  stimulatePatch(frac = 0.1, amount = 4.5) {
+    const pos = this.data.pos;
+    if (!pos || !pos.length) return -1;
+    const s = Math.floor(Math.random() * this.n);
+    const sx = pos[s][0], sy = pos[s][1], sz = pos[s][2];
+    const d = new Float64Array(this.n);
+    for (let i = 0; i < this.n; i++) {
+      const dx = pos[i][0] - sx, dy = pos[i][1] - sy, dz = pos[i][2] - sz;
+      d[i] = dx * dx + dy * dy + dz * dz;
+    }
+    const k = Math.max(3, Math.floor(this.n * frac));
+    const order = Array.from({ length: this.n }, (_, i) => i).sort((a, b) => d[a] - d[b]);
+    this.stimulate(order.slice(0, k), amount);
+    return s;
   }
 
   step() {
