@@ -159,9 +159,9 @@ async function generate(el, live) {
     <td><button class="btn act mol-test" data-i="${i}">Test ▶</button></td>
   </tr>`).join('');
 
-  const data = await connectomeData();
-  tbody.querySelectorAll('.mol-test').forEach((btn) => btn.addEventListener('click', () => {
-    runBench(el, data, channels[+btn.dataset.i]);
+  tbody.querySelectorAll('.mol-test').forEach((btn) => btn.addEventListener('click', async () => {
+    // always test on the CURRENTLY-loaded brain, even if you switched connectome after generating
+    runBench(el, window.__connectome || await connectomeData(), channels[+btn.dataset.i]);
   }));
 }
 
