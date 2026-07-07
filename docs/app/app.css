@@ -41,7 +41,17 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
    EXACTLY: a full-bleed central visualization framed by floating overlay cards, with the
    living avatar aside still beside it — not a document panel. */
 .panel-overlay.stage { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: hidden; }
-.stage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* opaque so the 2D bench fully covers the live 3D brain behind it — no overlap. The 2D/3D
+   toggle hides this canvas to reveal the 3D brain. */
+.stage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  background: radial-gradient(120% 120% at 50% 20%, #ffffff 0%, #f3f3f5 70%, #ececef 100%); }
+:root[data-theme="dark"] .stage-canvas { background: #0f0f11; }
+/* segmented 2D / 3D view toggle inside a floating card */
+.seg { display: inline-flex; border: 1px solid var(--hair); border-radius: var(--pill);
+  overflow: hidden; margin: 0 0 .5rem; align-self: flex-start; }
+.seg-btn { font-family: var(--sans); font-size: .75rem; font-weight: 600; color: var(--ink-2);
+  background: var(--paper); border: 0; padding: .3rem .75rem; cursor: pointer; }
+.seg-btn.active { background: var(--ink); color: #fff; }
 /* while any tab panel is open, hide the Brain-template's own floating cards behind it */
 .viewer.panelling > .overlay, .viewer.panelling > .legend { display: none; }
 /* floating cards inside a panel reuse .overlay/.stats/.controls; just cap height + scroll */

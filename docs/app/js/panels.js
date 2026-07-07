@@ -48,13 +48,17 @@ function renderScanner(el) {
     </div>
     <div class="overlay controls">
       <div class="eyebrow">🔊 Sonogenetics · write</div>
+      <div class="seg" id="sc-view">
+        <button class="seg-btn active" data-v="2d">2D bench</button>
+        <button class="seg-btn" data-v="3d">3D brain</button>
+      </div>
       <label class="field">channel
         <select id="sc-chan"><option value="direct">— direct (no molecule) —</option></select></label>
       <label class="field">effect
         <select id="sc-sign"><option value="1">excite (cation)</option><option value="-1">inhibit (anion)</option></select></label>
       <label class="ctl">pressure <input id="sc-gain" type="range" min="1" max="7" step="0.5" value="5"><span id="sc-gain-v">5</span></label>
       <button class="btn act" id="sc-pulse">🔊 Deliver ultrasound pulse</button>
-      <div class="muted small">Click the tissue to aim the focus. A molecule scales the same pulse by its <b>sensitivity × conductance</b>, so each one lands differently.</div>
+      <div class="muted small" id="sc-hint">Click the tissue to aim the focus. A molecule scales the same pulse by its <b>sensitivity × conductance</b>, so each one lands differently.</div>
     </div>`;
 
   const data = window.__connectome;
@@ -69,9 +73,22 @@ function renderScanner(el) {
   });
 
   canvas.addEventListener('click', (e) => {
-    if (!scanBench) return;
+    if (!scanBench || scView !== '2d') return;
     const r = canvas.getBoundingClientRect();
     scanBench.aimAt(e.clientX - r.left, e.clientY - r.top);
+  });
+
+  // 2D bench (opaque, covers the 3D brain) ⇄ 3D brain (hide the bench to reveal it)
+  let scView = '2d';
+  const hint = el.querySelector('#sc-hint');
+  el.querySelector('#sc-view').addEventListener('click', (e) => {
+    const btn = e.target.closest('.seg-btn'); if (!btn) return;
+    scView = btn.dataset.v;
+    el.querySelectorAll('#sc-view .seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    canvas.style.display = scView === '2d' ? '' : 'none';
+    hint.innerHTML = scView === '2d'
+      ? 'Click the tissue to aim the focus. A molecule scales the same pulse by its <b>sensitivity × conductance</b>, so each one lands differently.'
+      : 'Now driving the <b>live 3D brain</b> — the pulse stimulates a patch of the real connectome; watch it light up and read out below.';
   });
 
   // channel selector — load a generated molecule so the pulse uses its sensitivity × conductance
@@ -89,21 +106,40 @@ function renderScanner(el) {
   });
 
   el.querySelector('#sc-pulse').addEventListener('click', () => {
-    if (!scanBench) return;
     const pressure = +el.querySelector('#sc-gain').value;
     const ch = chanSel.value === 'direct' ? null : channels[+chanSel.value];
+    const sign = ch ? ch.sign : +signSel.value;
+    const gain = ch ? pressure * ch.sensitivity * ch.conductance : pressure;
     // a molecule scales the SAME pressure by its channel sensitivity × conductance; direct mode
     // drives the ultrasound raw (sensitivity = conductance = 1).
-    if (ch) scanBench.firePulse(ch.sign, pressure * ch.sensitivity * ch.conductance);
-    else scanBench.firePulse(+signSel.value, pressure);
+    if (scView === '2d') { if (scanBench) scanBench.firePulse(sign, gain); }
+    else if (window.__sim) {                                    // drive the real 3D sim
+      window.__sim.stimulatePatch(0.12, sign * gain * 0.9);
+      if (window.__ensureRunning) window.__ensureRunning();       // step it so the pulse propagates
+    }
   });
   liveTimer = setInterval(() => {
-    if (!scanBench) return;
-    const s = scanBench.liveStats();
-    el.querySelector('#sc-firing').textContent = s.motesActive;
-    el.querySelector('#sc-mean').textContent = s.backscatter;
-    el.querySelector('#sc-now').textContent = s.readout.toFixed(3);
+    let motesActive = '—', backscatter = '—', readout = 0;
+    if (scView === '2d') {
+      if (!scanBench) return;
+      const s = scanBench.liveStats();
+      motesActive = s.motesActive; backscatter = s.backscatter; readout = s.readout;
+    } else {
+      const st = sim3dStats(); if (!st) return;
+      motesActive = st.active; backscatter = st.mean.toFixed(3); readout = st.mean;
+    }
+    el.querySelector('#sc-firing').textContent = motesActive;
+    el.querySelector('#sc-mean').textContent = backscatter;
+    el.querySelector('#sc-now').textContent = (+readout).toFixed(3);
   }, 150);
+}
+
+// read-out from the live 3D BrainSim (used when a stage panel is in "3D brain" view)
+function sim3dStats() {
+  const s = window.__sim; if (!s) return null;
+  let active = 0, sum = 0;
+  for (let i = 0; i < s.n; i++) { const a = s.act[i]; if (a > 0.1) active++; sum += a; }
+  return { active, mean: s.n ? sum / s.n : 0 };
 }
 
 function renderSystem(el) {

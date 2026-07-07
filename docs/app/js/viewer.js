@@ -361,6 +361,8 @@ function toggleRun(force) {
   $('run').classList.toggle('act', running);
 }
 $('run').addEventListener('click', () => toggleRun());
+// let the Scanner/Biomolecules panels start the 3D brain when they drive it in "3D brain" view
+window.__ensureRunning = () => { if (!running) toggleRun(true); };
 const stimBtn = (id, role) => $(id).addEventListener('click', () => { if (sim) { sim.stimulateRole(role); if (!running) toggleRun(true); } });
 stimBtn('stim-post', 'touchPost');
 stimBtn('stim-fwd', 'fwd');

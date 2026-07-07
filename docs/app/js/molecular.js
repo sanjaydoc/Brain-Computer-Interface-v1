@@ -65,7 +65,7 @@ function channelSpec(seq, modality) {
 
 const chanType = (ch) => ch.sign > 0 ? 'cation · excite' : 'anion · inhibit';
 
-let _data = null, _samples = null, _live = null, _bench = null;
+let _data = null, _samples = null, _live = null, _bench = null, _bioView = '2d';
 
 // exposed so the Scanner can load a molecule's channel and use its real sensitivity/conductance
 export { channelSpec, chanType };
@@ -112,6 +112,10 @@ export async function renderBiomolecules(el) {
     </div>
     <div class="overlay controls">
       <div class="eyebrow">Part 1 · De-novo channels ${badge}</div>
+      <div class="seg" id="bio-view">
+        <button class="seg-btn active" data-v="2d">2D bench</button>
+        <button class="seg-btn" data-v="3d">3D brain</button>
+      </div>
       <label class="field">modality
         <select id="mol-modality"><option>smiles</option><option>protein</option><option>dna</option></select></label>
       <label class="field">focus on
@@ -122,8 +126,27 @@ export async function renderBiomolecules(el) {
     </div>`;
 
   el.querySelector('#mol-gen').addEventListener('click', () => generate(el, live));
+
+  // 2D bench (opaque, covers the 3D brain) ⇄ 3D brain (hide the bench to reveal it)
+  _bioView = '2d';
+  const canvas = el.querySelector('#bench-canvas');
+  el.querySelector('#bio-view').addEventListener('click', (e) => {
+    const btn = e.target.closest('.seg-btn'); if (!btn) return;
+    _bioView = btn.dataset.v;
+    el.querySelectorAll('#bio-view .seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    canvas.style.display = _bioView === '2d' ? '' : 'none';
+    if (_bioView === '2d') idleBench(el);  // restore the idle connectome view
+  });
+
   // show the loaded connectome in the centre straight away (idle), like the Brain template
   idleBench(el);
+}
+
+// mean activation across the live 3D BrainSim (for the "3D brain" test view)
+function simMean() {
+  const s = window.__sim; if (!s) return 0;
+  let sum = 0; for (let i = 0; i < s.n; i++) sum += s.act[i];
+  return s.n ? sum / s.n : 0;
 }
 
 // central canvas shows the current brain idling until a molecule is tested
@@ -175,11 +198,15 @@ async function generate(el, live) {
 }
 
 function runBench(el, data, ch) {
-  if (_bench) _bench.stop();
   el.querySelector('#bench-ch').textContent = `${ch.id} · ${chanType(ch)}`;
   const bn0 = data.n_neurons;
   el.querySelector('#bench-cx').textContent = `${data.name || 'connectome'} · sens ${ch.sensitivity.toFixed(2)} · g ${ch.conductance.toFixed(2)}`;
   const verdict = el.querySelector('#bench-verdict');
+
+  // 3D-brain view: open the channel on the LIVE 3D sim and read the firing change from it.
+  if (_bioView === '3d' && window.__sim) { runBench3d(el, ch, verdict); return; }
+
+  if (_bench) _bench.stop();
   verdict.innerHTML = '<span class="muted">running the BCI loop…</span>';
   const canvas = el.querySelector('#bench-canvas');
 
@@ -195,4 +222,25 @@ function runBench(el, data, ch) {
   if (bn < bn0) el.querySelector('#bench-cx').textContent += ` · ${bn0.toLocaleString()}→${bn.toLocaleString()} sampled`;
   // canvas needs a laid-out size before the bench measures it
   requestAnimationFrame(() => { _bench.resize(); _bench.start(); });
+}
+
+// 3D-brain view: open the channel on the LIVE 3D sim (same one the Brain template runs) and
+// read the firing change straight off it — the real connectome lights up in the centre.
+function runBench3d(el, ch, verdict) {
+  const sim = window.__sim;
+  if (_bench) _bench.stop();
+  verdict.innerHTML = '<span class="muted">opening the channel on the 3D brain…</span>';
+  const base = simMean();
+  const amount = ch.sign * (3 + 4 * ch.sensitivity * ch.conductance);   // cation excites (+), anion inhibits (−)
+  sim.stimulatePatch(0.14, amount);
+  if (window.__ensureRunning) window.__ensureRunning();                 // step it so the effect propagates
+  setTimeout(() => {
+    const d = simMean() - base;
+    const dir = d > 0.008 ? 'excited' : (d < -0.008 ? 'suppressed' : 'weak');
+    const cls = dir === 'excited' ? 'ok' : (dir === 'suppressed' ? 'no' : 'muted');
+    const verb = dir === 'excited' ? 'drove firing across the 3D connectome'
+      : dir === 'suppressed' ? 'suppressed activity in the 3D connectome' : 'had little net effect';
+    verdict.innerHTML = `<b class="chip ${cls}">${dir}</b> `
+      + `<span class="muted small">${verb} · Δ ${d >= 0 ? '+' : ''}${d.toFixed(3)}</span>`;
+  }, 800);
 }
