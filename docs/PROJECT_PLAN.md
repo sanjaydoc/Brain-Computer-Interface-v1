@@ -1,6 +1,6 @@
 # Brain-Computer-Interface v1 — Project Plan
 
-> Status: **DRAFT — iterating** · No code written yet · Branch: `claude/new-project-planning-bk2g71`
+> Status: **v1 complete** · Default branch: `main`
 
 ### North Star
 **Ultimate goal = the human brain (~86B neurons, ~10¹⁴ synapses).** Every architecture

@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - main
-      - claude/new-project-planning-bk2g71
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"
