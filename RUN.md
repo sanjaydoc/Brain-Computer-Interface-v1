@@ -121,7 +121,7 @@ real connectome at a time — every rung uses the **same** engine, renderer, and
 | 1 | *C. elegans* (worm) | 302 | ✅ bundled | `bci load profiles/worm.yaml` — default, no download |
 | 2a | MICrONS mouse visual cortex | ~200 k | ✅ fetch locally | `python scripts/fetch_microns.py` |
 | 2b | *Drosophila* (FlyWire) | ~130 k | ✅ fetch locally | `python scripts/fetch_drosophila.py` |
-| 3 | Mouse whole-brain | ~71 M | 🔜 planned | — |
+| 3 | Mouse mesoscale (region-modular, statistical) | 1e5 … 71 M | ✅ works now | `bci load profiles/mouse.yaml` (real data: `python scripts/fetch_mouse_mesoscale.py`) |
 | ★ | Human | 86 B | 🎯 North Star | — |
 
 The worm is bundled; the big brains are **fetched on your own machine** (their data hosts —
@@ -154,6 +154,24 @@ and a compact `docs/app/data/<name>.json` (used by the browser). `--max-neurons`
 downsample; the headless engine scales to millions, the browser is happiest under ~50 k.
 Re-run `bci serve`, then pick the brain from the dropdown.
 
+### 3 — Mouse mesoscale (scales to millions — no download needed)
+Rung 3 is *statistical*: it turns the Allen mesoscale **region graph** into a neuron-level
+connectome at any scale, so it runs **out of the box** with a brain-like procedural scaffold.
+Set the scale with `n` in `profiles/mouse.yaml` (default 100 k; the engine is proven to 1 M).
+```bash
+bci load profiles/mouse.yaml          # build + print stats (region-modular wiring)
+bci run --connectome mesoscale        # run the loop on it headless
+```
+To wire it from the **real Allen matrix** instead of the scaffold (region centroids +
+connection strengths from Oh et al. 2014):
+```bash
+pip install allensdk
+python scripts/fetch_mouse_mesoscale.py   # caches data/connectomes/mouse_mesoscale/*
+bci load profiles/mouse.yaml              # now built from real region data
+```
+The control-plane dropdown ships a 6 k-neuron mesoscale preview so you can see the
+region-modular structure in 3D without any setup.
+
 ---
 
 ## 6. Tests
@@ -165,9 +183,9 @@ pytest
 # Windows, no activation
 .\.venv\Scripts\python.exe -m pytest
 ```
-28 tests: connectome loading, the Rung-2 sources (MICrONS / Drosophila), the emergent-locomotion
-behavior, I/O contracts, the live API, the molecular pipeline, and scalability (proven to
-1,000,000+ neurons).
+33 tests: connectome loading, the Rung-2 sources (MICrONS / Drosophila), the Rung-3 mesoscale
+source (region-modular structure + scale), the emergent-locomotion behavior, I/O contracts, the
+live API, the molecular pipeline, and scalability (proven to 1,000,000+ neurons).
 
 ---
 

@@ -204,19 +204,28 @@ snapshot-able (save / load / rewind), and partition-native (splittable across ma
 ## 🪜 The scale ladder
 
 One code path, one North Star. Scaling up is **loading the next profile**, not a rewrite —
-same engine, same renderer, same I/O contracts. Rungs 1–2 are live today.
+same engine, same renderer, same I/O contracts. Rungs 1–3 are live today.
 
 | Rung | Source | Neurons | Synapses | Data status | In this repo |
 |:----:|--------|--------:|---------:|-------------|-------------|
 | 1 | **C. elegans** (worm) | 302 | ~7,000 | ✅ real & *complete* | ✅ bundled — default |
 | 2a | **MICrONS** (mouse V1 mm³) | ~200,000 | ~500,000,000 | ✅ real EM | ✅ `scripts/fetch_microns.py` |
 | 2b | **Drosophila** (FlyWire) | ~130,000 | ~50,000,000 | ✅ real EM | ✅ `scripts/fetch_drosophila.py` |
-| 3 | **Mouse** (mesoscale) | ~71,000,000 | ~10¹² | ✅ real (regional) | 🔜 planned |
+| 3 | **Mouse mesoscale** (region-modular) | **1e5 … 71M** | scales with N | ✅ statistical | ✅ `profiles/mouse.yaml` — proven to 1M |
 | 4 | **🎯 Human** (North Star) | **~86,000,000,000** | **~10¹⁴** | statistical | 🎯 target |
 
 Rung 1 ships with the repo. The Rung-2 brains are **fetched on your own machine** (their EM
 hosts — CAVE and FlyWire — aren't reachable from the hosted demo); once cached they load from
-the control-plane dropdown and render with automatic level-of-detail. See [RUN.md §5](RUN.md).
+the control-plane dropdown and render with automatic level-of-detail.
+
+**Rung 3** is where the ladder reaches millions. No one has an every-synapse map of a whole
+brain, so this rung is *statistical*: it turns the Allen mesoscale **region graph** into a
+neuron-level connectome at **any N** — distributing neurons across regions and wiring them by
+region-to-region strength, so structure is **modular and spatially embedded**, not
+uniform-random. It builds a brain-like procedural scaffold out of the box (`bci load
+profiles/mouse.yaml`), swaps in the **real Allen matrix** via `scripts/fetch_mouse_mesoscale.py`,
+and is proven headless at **1,000,000 neurons / 16M synapses in ~8 s under 1 GB** — the same
+vectorized, sparse, O(N+E) assembly the human rung will use. See [RUN.md §5](RUN.md).
 
 ---
 
@@ -325,8 +334,9 @@ Brain-Computer-Interface-v1/
 - ✅ **Part 1 wired** · **De-Novo-LLM** integrated — generate biomolecules → cast as sonogenetic channels → **test on the connectome** (local GPU / NVIDIA NIM / bundled fallback)
 - ✅ **Hodgkin–Huxley model** · biophysical neuron model, drop-in behind the same `NeuronModel` interface
 - ✅ **Rung 2 — big brains** · **MICrONS** mouse cortex (~200 k) + **Drosophila** (FlyWire) sources, LOD renderer (GPU point cloud + sampled synapses), local fetch scripts, control-plane dropdown
+- ✅ **Rung 3 — mesoscale to millions** · region-modular **mouse mesoscale** source (Allen region graph → neuron-level connectome at any N), **proven to 1 M neurons headless**, procedural scaffold + real-Allen fetch script, live in the dropdown
 
-**v1 complete — the full four-part loop is real, and the ladder is climbing.** Rungs 1–2 load today (worm bundled; MICrONS + Drosophila fetch locally). Next horizon: a GPU stepper, then mouse mesoscale (~71 M).
+**v1 complete — the full four-part loop is real, and the ladder is climbing.** Rungs 1–3 load today (worm bundled; MICrONS + Drosophila fetch locally; mesoscale scales to millions). Next horizon: a GPU stepper for the mesoscale/human rungs.
 
 ### Running the molecular pipeline locally
 The hosted demo uses bundled samples (a browser can't run PyTorch). On your own machine:
