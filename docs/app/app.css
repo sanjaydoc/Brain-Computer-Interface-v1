@@ -62,11 +62,16 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .overlay .eyebrow .chip { vertical-align: middle; }
 
 /* Waves — modality checkboxes to invent a wave combination */
-.wv-modes { display: flex; flex-direction: column; gap: .1rem; max-height: 34vh; overflow: auto; margin: .1rem 0 .35rem; }
+/* flex:0 0 auto so the flex-column card never squeezes the checkbox list to zero height
+   (overflow:auto would make it shrinkable) — the card itself scrolls instead. */
+.wv-modes { display: flex; flex-direction: column; gap: .1rem; flex: 0 0 auto; margin: .1rem 0 .35rem; }
 .wv-mode-row { display: flex; align-items: center; gap: .4rem; font-size: .76rem; padding: .12rem 0; cursor: pointer; }
 .wv-mode-row input { accent-color: var(--ink); }
 .wv-mode-row b { font-weight: 600; }
 .wv-mode-row span { margin-left: auto; font-size: .66rem; }
+.wv-modes { border: 1px solid var(--hair); border-radius: 8px; padding: .3rem .5rem; }
+.wv-preview { width: 100%; height: 54px; display: block; border: 1px solid var(--hair);
+  border-radius: 8px; background: var(--paper); margin: 0 0 .3rem; }
 
 /* roadmap scaffold cards (Physics / Waves / Electronics / Hardware / Fusion / 3D print) */
 .overlay.scaffold { top: 18px; left: 18px; max-width: 440px; }

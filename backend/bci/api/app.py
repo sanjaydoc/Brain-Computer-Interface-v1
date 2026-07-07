@@ -19,6 +19,7 @@ from ..connectome import sources
 from ..electronics import ElectronicsService
 from ..molecular import MolecularService, SonogeneticChannel, test_on_connectome
 from ..runtime import Runtime
+from ..waves import WaveInventor
 
 # repo_root/docs — the GUI (served so it's same-origin as the API → live mode works)
 DOCS = Path(__file__).resolve().parents[3] / "docs"
@@ -41,6 +42,11 @@ class TestReq(BaseModel):
 
 class ElectronicsReq(BaseModel):
     concept: str
+    backend: str = "auto"
+
+
+class WaveInventReq(BaseModel):
+    goal: str
     backend: str = "auto"
 
 
@@ -103,6 +109,17 @@ def create_app() -> FastAPI:
     @app.post("/api/electronics/generate")
     def electronics_generate(req: ElectronicsReq) -> dict:
         return electronics.generate(req.concept, backend=req.backend)
+
+    # -- Waves: invent a new wave from a goal (LLM invention engine) -----------
+    inventor = WaveInventor()
+
+    @app.get("/api/waves/backends")
+    def waves_backends() -> dict:
+        return inventor.backends()
+
+    @app.post("/api/waves/invent")
+    def waves_invent(req: WaveInventReq) -> dict:
+        return inventor.invent(req.goal, backend=req.backend)
 
     @app.websocket("/ws")
     async def ws(websocket: WebSocket) -> None:

@@ -32,6 +32,27 @@ const eng = (x, unit) => {   // human-readable engineering notation
   return `${x.toExponential(1)} ${unit}`;
 };
 
+// rule-based inventor (demo mode) — a faithful JS mirror of backend/bci/waves/inventor.py
+function nameFrom(goal) {
+  const w = (goal || '').replace(/[^a-z0-9 ]/gi, ' ').split(/\s+/).filter((x) => x.length > 2);
+  return (w.slice(0, 2).map((s) => s[0].toUpperCase() + s.slice(1)).join('') || 'Invented') + '-Wave';
+}
+function composeWaveJS(goal) {
+  const t = (goal || '').toLowerCase(), want = (...ks) => ks.some((k) => t.includes(k));
+  let modes = [];
+  if (want('deep', 'subcortical', 'thalam', 'whole', 'entire', 'map', 'all')) modes.push('ultrasound', 'radio');
+  if (want('surface', 'cortical', 'cortex', 'optical', 'fnirs', 'scalp')) modes.push('infrared');
+  if (want('functional', 'metabolic', 'activity', 'pet', 'blood')) modes.push('gamma');
+  if (want('bone', 'skull', 'structural', 'ct', 'dense')) modes.push('xray');
+  if (want('broad', 'diffuse', 'field', 'wide')) modes.push('infrasound');
+  if (!modes.length) modes = ['ultrasound', 'infrared', 'radio'];
+  modes = [...new Set(modes)].slice(0, 4);
+  const waveform = want('scan', 'sweep', 'image') ? 'chirp' : want('stimulate', 'drive') ? 'burst'
+    : want('monitor', 'continuous', 'record', 'read') ? 'continuous' : 'pulse';
+  return { name: nameFrom(goal), modes, waveform, freq: 1.0, amplitude: 5, sign: 1,
+    rationale: `Combines ${modes.join(', ')} so their reaches cover deep, surface and whole-volume tissue.`, backend: 'demo' };
+}
+
 let bench = null, timer = null;
 export function stopWaves() {
   if (bench) { bench.stop(); bench = null; }
@@ -59,17 +80,25 @@ export function renderWaves(el) {
     </div>
     <div class="overlay controls">
       <div class="eyebrow">〰️ invent a wave</div>
-      <div class="muted small" style="margin:-.1rem 0 .1rem">combine modalities across the spectrum:</div>
+      <label class="field">✨ invention prompt
+        <input id="wv-goal" type="text" placeholder="e.g. map the whole cortex with no blind spots" style="text-transform:none"></label>
+      <button class="btn" id="wv-ai" style="margin-bottom:.35rem">✨ Invent from prompt</button>
+      <div class="muted small" style="margin:-.1rem 0 .15rem">1 · combine modalities across the spectrum:</div>
       <div class="wv-modes">${modeRows}</div>
-      <label class="field">channel (biomolecule)
-        <select id="wv-chan"><option value="direct">— direct (no molecule) —</option></select></label>
+      <div class="muted small" style="margin:.15rem 0 .1rem">2 · shape the waveform:</div>
+      <canvas id="wv-preview" class="wv-preview"></canvas>
+      <label class="field">waveform
+        <select id="wv-form"><option value="pulse">pulse</option><option value="continuous">continuous tone</option><option value="burst">burst train</option><option value="chirp">frequency chirp (sweep)</option></select></label>
+      <label class="ctl">modulation f <input id="wv-freq" type="range" min="0.3" max="2" step="0.1" value="1"><span id="wv-freq-v">1.0</span></label>
       <label class="ctl">amplitude <input id="wv-amp" type="range" min="1" max="8" step="0.5" value="5"><span id="wv-amp-v">5</span></label>
       <label class="ctl">effect <select id="wv-sign"><option value="1">excite</option><option value="-1">inhibit</option></select></label>
+      <label class="field">channel (biomolecule)
+        <select id="wv-chan"><option value="direct">— direct (no molecule) —</option></select></label>
       <button class="btn act" id="wv-fire">🔊 Fire selected combination</button>
-      <label class="field">name
+      <label class="field">3 · name your wave
         <input id="wv-name" type="text" placeholder="e.g. TriBand-1" style="text-transform:none"></label>
       <button class="btn act" id="wv-invent">💾 Invent this wave</button>
-      <div class="muted small" id="wv-note">Click the tissue to aim, fire the combination, then save it. Every wave has amplitude · λ · f (v = f·λ); the band sets its reach.</div>
+      <div class="muted small" id="wv-note">Pick modalities + a waveform, aim (click the tissue), fire, then save. Every wave has amplitude · λ · f (v = f·λ); the band sets its reach.</div>
     </div>`;
 
   const canvas = el.querySelector('#wv-canvas');
@@ -92,6 +121,29 @@ export function renderWaves(el) {
 
   const selectedModes = () => [...el.querySelectorAll('.wv-mode-row input:checked')].map((cb) => MODES.find((m) => m.id === cb.dataset.id)).filter(Boolean);
 
+  // waveform preview — draw the chosen envelope shape so "inventing" is visible
+  const envAt = (form, t, freq) => {
+    if (form === 'continuous') return Math.min(1, t / 8) * Math.min(1, (96 - t) / 8);
+    if (form === 'burst') return (Math.floor(t / 12) % 2 === 0) ? Math.sin(((t % 12) / 12) * Math.PI) : 0;
+    if (form === 'chirp') return Math.abs(Math.sin(t * (0.12 + freq * t * 0.004)));
+    return t < 34 ? Math.sin((t / 34) * Math.PI) : 0;   // pulse
+  };
+  const pv = el.querySelector('#wv-preview'), pctx = pv.getContext('2d');
+  const drawPreview = () => {
+    const form = el.querySelector('#wv-form').value, freq = +el.querySelector('#wv-freq').value;
+    const r = pv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    pv.width = r.width * d; pv.height = r.height * d; pctx.setTransform(d, 0, 0, d, 0, 0);
+    const W = r.width, H = r.height;
+    pctx.clearRect(0, 0, W, H);
+    pctx.strokeStyle = 'rgba(0,0,0,.08)'; pctx.beginPath(); pctx.moveTo(0, H / 2); pctx.lineTo(W, H / 2); pctx.stroke();
+    pctx.beginPath();
+    for (let i = 0; i <= 96; i++) { const y = H - 4 - envAt(form, i, freq) * (H - 8); pctx[i === 0 ? 'moveTo' : 'lineTo'](4 + i / 96 * (W - 8), y); }
+    pctx.strokeStyle = '#2f6fed'; pctx.lineWidth = 1.6; pctx.stroke();
+  };
+  el.querySelector('#wv-freq').addEventListener('input', (e) => { el.querySelector('#wv-freq-v').textContent = (+e.target.value).toFixed(1); drawPreview(); });
+  el.querySelector('#wv-form').addEventListener('change', drawPreview);
+  requestAnimationFrame(drawPreview);
+
   const fireMode = (m) => {
     if (!bench) return;
     const amp = +el.querySelector('#wv-amp').value;
@@ -99,7 +151,7 @@ export function renderWaves(el) {
     const sign = ch ? ch.sign : +el.querySelector('#wv-sign').value;
     const gain = ch ? amp * ch.sensitivity * ch.conductance : amp;
     bench.setReach(m.reach, m.frac);
-    bench.fireWave(sign, gain, m.reach === 'focal' ? 'pulse' : 'continuous', 1);
+    bench.fireWave(sign, gain, el.querySelector('#wv-form').value, +el.querySelector('#wv-freq').value);
   };
   const fireCombo = () => { const ms = selectedModes(); ms.forEach((m, k) => setTimeout(() => fireMode(m), k * 750)); };
 
@@ -114,7 +166,8 @@ export function renderWaves(el) {
   const invent = () => {
     const ms = selectedModes(); if (!ms.length) return;
     const name = el.querySelector('#wv-name').value.trim() || `Wave-${WB.waves.length + 1}`;
-    const w = { name, modes: ms.map((m) => m.id), amplitude: +el.querySelector('#wv-amp').value,
+    const w = { name, modes: ms.map((m) => m.id), waveform: el.querySelector('#wv-form').value,
+      freq: +el.querySelector('#wv-freq').value, amplitude: +el.querySelector('#wv-amp').value,
       sign: +el.querySelector('#wv-sign').value, coverage: bench ? +bench.coverage().toFixed(2) : 0 };
     WB.waves.push(w); WB.wave = w;
     el.querySelector('#wv-name').value = '';
@@ -129,6 +182,30 @@ export function renderWaves(el) {
     const r = canvas.getBoundingClientRect();
     bench.zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
   }, { passive: false });
+  // ✨ invent from a goal — live: the LLM engine (/api/waves/invent, NVIDIA NIM / local /
+  // OpenAI); demo: the in-browser rule-based inventor. Applies the design to the controls.
+  const applyInvention = (w) => {
+    el.querySelectorAll('.wv-mode-row input').forEach((cb) => { cb.checked = w.modes.includes(cb.dataset.id); });
+    el.querySelector('#wv-form').value = w.waveform || 'pulse';
+    el.querySelector('#wv-freq').value = w.freq || 1; el.querySelector('#wv-freq-v').textContent = (+(w.freq || 1)).toFixed(1);
+    el.querySelector('#wv-amp').value = w.amplitude || 5; el.querySelector('#wv-amp-v').textContent = w.amplitude || 5;
+    el.querySelector('#wv-sign').value = String(w.sign || 1);
+    el.querySelector('#wv-name').value = w.name || '';
+    drawPreview();
+    el.querySelector('#wv-note').innerHTML = `✨ <b>${w.name}</b>: ${w.rationale || ''} `
+      + `<span class="muted">(${w.backend || 'demo'}${w.provider ? ' · ' + w.provider : ''})</span> — now Fire the combination, then <b>Invent this wave</b> to save.`;
+  };
+  el.querySelector('#wv-ai').addEventListener('click', async () => {
+    const goal = el.querySelector('#wv-goal').value.trim(); if (!goal) return;
+    el.querySelector('#wv-note').textContent = 'Inventing…';
+    let w;
+    try {
+      const r = await fetch('/api/waves/invent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goal }) });
+      w = r.ok ? await r.json() : composeWaveJS(goal);
+    } catch { w = composeWaveJS(goal); }
+    applyInvention(w);
+  });
+
   el.querySelector('#wv-fire').addEventListener('click', fireCombo);
   el.querySelector('#wv-invent').addEventListener('click', invent);
   el.querySelector('#wv-reset').addEventListener('click', () => bench && bench.clearCoverage());
