@@ -2,7 +2,7 @@
 // System are interactive (they drive / read the same running BrainSim, window.__sim).
 // Virtual env is an info panel (the worm is live in the Brain template).
 
-import { renderBiomolecules } from './molecular.js';
+import { renderBiomolecules, demoChannels, chanType } from './molecular.js';
 import { TestBench } from './testbench.js';
 
 const VENV = `
@@ -42,11 +42,14 @@ function renderScanner(el) {
     below). v1 uses simulated adapters behind the real
     <code>NeuralInput</code>/<code>NeuralOutput</code> contracts.</p>
     <div class="sc-controls">
+      <label class="ctl">channel
+        <select id="sc-chan"><option value="direct">— direct (no molecule) —</option></select></label>
       <label class="ctl">effect
         <select id="sc-sign"><option value="1">excite (cation)</option><option value="-1">inhibit (anion)</option></select></label>
-      <label class="ctl">acoustic pressure <input id="sc-gain" type="range" min="1" max="7" step="0.5" value="4"><span id="sc-gain-v">4</span></label>
+      <label class="ctl">acoustic pressure <input id="sc-gain" type="range" min="1" max="7" step="0.5" value="5"><span id="sc-gain-v">5</span></label>
       <button class="btn act" id="sc-pulse">🔊 Deliver ultrasound pulse</button>
     </div>
+    <div class="muted small" id="sc-chan-note" style="margin:-6px 0 10px">Load a generated molecule to use its real <b>sensitivity × conductance</b> — the same pressure then produces a different effect per molecule. Or drive the ultrasound directly.</div>
     <canvas id="sc-canvas" class="bench-canvas" style="cursor:crosshair"></canvas>
     <div class="pgrid" style="margin-top:12px">
       <div class="card"><div class="label">active motes</div><b id="sc-firing">—</b><p class="muted">neural-dust backscatter</p></div>
@@ -62,7 +65,7 @@ function renderScanner(el) {
 
   if (!data) { canvas.style.display = 'none'; return; }
   requestAnimationFrame(() => {
-    scanBench = new TestBench(canvas, data,
+    scanBench = window.__scanBench = new TestBench(canvas, data,
       { sensitivity: 1, conductance: 1, sign: 1, target: '', locus: [0.5, 0.45] }, null, { interactive: true });
     scanBench.startLive();
   });
@@ -72,8 +75,29 @@ function renderScanner(el) {
     const r = canvas.getBoundingClientRect();
     scanBench.aimAt(e.clientX - r.left, e.clientY - r.top);
   });
+
+  // channel selector — load a generated molecule so the pulse uses its sensitivity × conductance
+  let channels = [];
+  const chanSel = el.querySelector('#sc-chan'), signSel = el.querySelector('#sc-sign');
+  demoChannels('smiles', 4).then((cs) => {
+    channels = cs;
+    chanSel.insertAdjacentHTML('beforeend', cs.map((c, i) =>
+      `<option value="${i}">${c.id} · ${chanType(c)} · sens ${c.sensitivity.toFixed(2)} · g ${c.conductance.toFixed(2)}</option>`).join(''));
+  });
+  chanSel.addEventListener('change', () => {
+    const ch = chanSel.value === 'direct' ? null : channels[+chanSel.value];
+    if (ch) { signSel.value = String(ch.sign); signSel.disabled = true; }
+    else signSel.disabled = false;
+  });
+
   el.querySelector('#sc-pulse').addEventListener('click', () => {
-    if (scanBench) scanBench.firePulse(+el.querySelector('#sc-sign').value, +el.querySelector('#sc-gain').value);
+    if (!scanBench) return;
+    const pressure = +el.querySelector('#sc-gain').value;
+    const ch = chanSel.value === 'direct' ? null : channels[+chanSel.value];
+    // a molecule scales the SAME pressure by its channel sensitivity × conductance; direct mode
+    // drives the ultrasound raw (sensitivity = conductance = 1).
+    if (ch) scanBench.firePulse(ch.sign, pressure * ch.sensitivity * ch.conductance);
+    else scanBench.firePulse(+signSel.value, pressure);
   });
   liveTimer = setInterval(() => {
     if (!scanBench) return;
