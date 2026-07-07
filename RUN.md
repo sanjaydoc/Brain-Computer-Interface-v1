@@ -144,9 +144,21 @@ python scripts/fetch_microns.py --max-neurons 20000
 ```
 
 ### 2b — Drosophila (FlyWire Codex)
-Download the neurons + connections CSVs from <https://codex.flywire.ai/> → **Downloads**, then:
+Log in at <https://codex.flywire.ai/> → **Downloads** and grab these files (ignore the giant
+Synapse Table / Skeletons — you don't need them):
+
+| Download | Size | Role |
+|----------|------|------|
+| **Connections (Filtered)** | ~68 MB | the wiring — **required** |
+| **Marked Neuron Coordinates** | ~5 MB | real 3D positions — **required** |
+| **Cell Types** | ~0.9 MB | colour-by-type — optional |
+
 ```bash
-python scripts/fetch_drosophila.py --neurons neurons.csv --connections connections.csv --max-neurons 20000
+python scripts/fetch_drosophila.py \
+    --connections "Connections (Filtered).csv" \
+    --coordinates "Marked Neuron Coordinates.csv" \
+    --types "Cell Types.csv" \
+    --max-neurons 20000
 ```
 
 Each script writes a CSV cache under `data/connectomes/<name>/` (used by the Python engine)

@@ -1,11 +1,20 @@
-"""Normalize a Drosophila connectome into the CSV cache (the rung after MICrONS).
+"""Normalize the FlyWire *Drosophila* connectome into the CSV cache (Rung 2b).
 
-Works from the publicly downloadable **FlyWire Codex** data dump (https://codex.flywire.ai/
-→ Downloads): a neurons table (root_id, position, cell_type) and a connections table
-(pre_root_id, post_root_id, syn_count). Column names are detected flexibly so hemibrain /
-larval exports also work.
+FlyWire's Codex (https://codex.flywire.ai/ → Downloads) splits the data across files. You
+need two, plus an optional third:
 
-    python scripts/fetch_drosophila.py --neurons neurons.csv --connections connections.csv --max-neurons 20000
+    Connections (Filtered)        →  --connections   (required; the wiring)
+    Marked Neuron Coordinates     →  --coordinates    (required for real 3D anatomy)
+    Cell Types                    →  --types          (optional; colours neurons by type)
+
+    python scripts/fetch_drosophila.py \\
+        --connections "Connections (Filtered).csv" \\
+        --coordinates "Marked Neuron Coordinates.csv" \\
+        --types "Cell Types.csv" \\
+        --max-neurons 20000
+
+(You can still pass a single combined table via --neurons instead of --coordinates/--types;
+column names are detected flexibly, so hemibrain / larval exports also work.)
 
 Writes data/connectomes/drosophila/{neurons,synapses}.csv and docs/app/data/drosophila.json.
 """
@@ -23,6 +32,7 @@ WEB = ROOT / "docs" / "app" / "data" / "drosophila.json"
 
 
 def _col(row: dict, *cands, default=None):
+    """Case-insensitive column lookup across a list of candidate names."""
     for c in cands:
         for k in row:
             if k.lower() == c:
@@ -30,10 +40,48 @@ def _col(row: dict, *cands, default=None):
     return default
 
 
+def _xyz(row: dict):
+    """Parse a FlyWire position — either a '[x, y, z]' / 'x y z' string or separate columns."""
+    p = _col(row, "position", "pos", "pt_position", "xyz", default=None)
+    if p:
+        s = str(p).strip("[]() ").replace(",", " ")
+        parts = [v for v in s.split() if v]
+        if len(parts) >= 3:
+            try:
+                return [float(parts[0]), float(parts[1]), float(parts[2])]
+            except ValueError:
+                pass
+    xs = _col(row, "pos_x", "x", "pt_position_x", default=None)
+    if xs is not None:
+        return [float(xs or 0),
+                float(_col(row, "pos_y", "y", "pt_position_y", default=0) or 0),
+                float(_col(row, "pos_z", "z", "pt_position_z", default=0) or 0)]
+    return None
+
+
+def _read_rooted(path: str, want_pos: bool, want_type: bool, pos: dict, types: dict, keep: set):
+    """Scan a FlyWire table keyed by root_id, filling pos/types for the kept neurons."""
+    with open(path, newline="") as f:
+        for row in csv.DictReader(f):
+            rid = str(_col(row, "root_id", "pt_root_id", "bodyid", "id", default="")).strip()
+            if not rid or rid not in keep:
+                continue
+            if want_pos and rid not in pos:
+                xyz = _xyz(row)
+                if xyz is not None:
+                    pos[rid] = xyz
+            if want_type and rid not in types:
+                t = _col(row, "cell_type", "primary_type", "type", "super_class", "class", default=None)
+                if t:
+                    types[rid] = str(t)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--neurons", required=True, help="FlyWire/hemibrain neurons CSV")
-    ap.add_argument("--connections", required=True, help="connections CSV (pre,post,syn_count)")
+    ap.add_argument("--connections", required=True, help="Connections (Filtered) CSV")
+    ap.add_argument("--coordinates", help="Marked Neuron Coordinates CSV (positions)")
+    ap.add_argument("--types", help="Cell Types CSV (labels)")
+    ap.add_argument("--neurons", help="legacy: one combined neurons table (position + type)")
     ap.add_argument("--max-neurons", type=int, default=20000)
     args = ap.parse_args()
 
@@ -41,55 +89,65 @@ def main() -> None:
     weight, deg = {}, {}
     with open(args.connections, newline="") as f:
         for row in csv.DictReader(f):
-            a = str(_col(row, "pre_root_id", "pre_pt_root_id", "bodyid_pre", "source"))
-            b = str(_col(row, "post_root_id", "post_pt_root_id", "bodyid_post", "target"))
-            c = float(_col(row, "syn_count", "weight", "count", default=1) or 1)
+            a = str(_col(row, "pre_root_id", "pre_pt_root_id", "bodyid_pre", "source", default="")).strip()
+            b = str(_col(row, "post_root_id", "post_pt_root_id", "bodyid_post", "target", default="")).strip()
+            c = float(_col(row, "syn_count", "weight", "count", "synapses", default=1) or 1)
             if not a or not b or a == b:
                 continue
             weight[(a, b)] = weight.get((a, b), 0.0) + c
-            deg[a] = deg.get(a, 0.0) + c; deg[b] = deg.get(b, 0.0) + c
+            deg[a] = deg.get(a, 0.0) + c
+            deg[b] = deg.get(b, 0.0) + c
 
     keep = set(sorted(deg, key=deg.get, reverse=True)[: args.max_neurons])
-    print(f"neurons in connections: {len(deg)} → keeping top {len(keep)} by connectivity")
+    print(f"neurons in connections: {len(deg):,} → keeping top {len(keep):,} by connectivity")
 
-    # 2) neurons → positions + types (only the kept set)
+    # 2) positions + types from whichever files were supplied
     OUT.mkdir(parents=True, exist_ok=True)
     pos, types = {}, {}
-    with open(args.neurons, newline="") as f:
-        for row in csv.DictReader(f):
-            rid = str(_col(row, "root_id", "pt_root_id", "bodyid", "id"))
-            if rid not in keep:
-                continue
-            p = _col(row, "position", "pos", default=None)
-            if p and "," in str(p):
-                xyz = [float(v) for v in str(p).strip("[]() ").split(",")[:3]]
-            else:
-                xyz = [float(_col(row, "pos_x", "x", default=0) or 0),
-                       float(_col(row, "pos_y", "y", default=0) or 0),
-                       float(_col(row, "pos_z", "z", default=0) or 0)]
-            pos[rid] = xyz
-            types[rid] = str(_col(row, "cell_type", "type", "super_class", default="neuron"))
+    for path in filter(None, [args.neurons, args.coordinates]):
+        _read_rooted(path, want_pos=True, want_type=True, pos=pos, types=types, keep=keep)
+    for path in filter(None, [args.types]):
+        _read_rooted(path, want_pos=False, want_type=True, pos=pos, types=types, keep=keep)
+
+    # neurons with no coordinate get a deterministic fallback point (keeps the graph whole)
+    missing = [rid for rid in keep if rid not in pos]
+    if missing:
+        import numpy as np
+        rng = np.random.default_rng(0)
+        center, scale = np.zeros(3), 1.0
+        if pos:  # sit fallbacks inside the real coordinate cloud, not off at the origin
+            arr = np.array(list(pos.values()), dtype=float)
+            center, scale = arr.mean(axis=0), float(arr.std()) or 1.0
+        for rid in missing:
+            pos[rid] = (center + rng.normal(size=3) * scale).tolist()
+        print(f"  {len(missing):,} kept neurons had no coordinate → deterministic fallback layout")
 
     with open(OUT / "neurons.csv", "w", newline="") as f:
-        w = csv.writer(f); w.writerow(["id", "type", "x", "y", "z"])
-        for rid, (x, y, z) in pos.items():
+        w = csv.writer(f)
+        w.writerow(["id", "type", "x", "y", "z"])
+        for rid in keep:
+            x, y, z = pos[rid]
             w.writerow([rid, types.get(rid, "neuron"), x, y, z])
     rows = 0
     with open(OUT / "synapses.csv", "w", newline="") as f:
-        w = csv.writer(f); w.writerow(["pre", "post", "kind", "weight"])
+        w = csv.writer(f)
+        w.writerow(["pre", "post", "kind", "weight"])
         for (a, b), c in weight.items():
-            if a in pos and b in pos:
-                w.writerow([a, b, "chemical", c]); rows += 1
-    print(f"wrote {len(pos)} neurons, {rows} connections")
+            if a in keep and b in keep:
+                w.writerow([a, b, "chemical", c])
+                rows += 1
+    print(f"wrote {len(keep):,} neurons, {rows:,} connections")
 
-    _export_web(pos, weight, types)
+    _export_web(keep, pos, weight, types)
 
 
-def _export_web(pos: dict, weight: dict, types: dict) -> None:
+def _export_web(keep: set, pos: dict, weight: dict, types: dict) -> None:
     import numpy as np
-    ids = list(pos.keys()); index = {r: i for i, r in enumerate(ids)}
+    ids = list(keep)
+    index = {r: i for i, r in enumerate(ids)}
     a = np.array([pos[r] for r in ids], dtype=float)
-    a -= a.mean(axis=0); a /= (a.std() + 1e-9)
+    a -= a.mean(axis=0)
+    a /= (a.std() + 1e-9)
     edges = [[index[x], index[y], float(c)] for (x, y), c in weight.items() if x in index and y in index]
     outdeg = [0] * len(ids)
     for e in edges:
@@ -102,7 +160,7 @@ def _export_web(pos: dict, weight: dict, types: dict) -> None:
     }
     WEB.parent.mkdir(parents=True, exist_ok=True)
     WEB.write_text(json.dumps(data, separators=(",", ":")))
-    print(f"wrote {WEB}  ({len(ids)} neurons, {len(edges)} edges, {WEB.stat().st_size // 1024} KB)")
+    print(f"wrote {WEB}  ({len(ids):,} neurons, {len(edges):,} edges, {WEB.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":
