@@ -3,6 +3,7 @@
 // Virtual env is an info panel (the worm is live in the Brain template).
 
 import { renderBiomolecules } from './molecular.js';
+import { TestBench } from './testbench.js';
 
 const VENV = `
   <div class="panel-inner">
@@ -24,45 +25,62 @@ const VENV = `
 const TARGETS = [['rev', 'reverse cmd (AVA)'], ['fwd', 'forward cmd (AVB)'],
   ['touchPost', 'posterior touch (PLM)'], ['touchAnt', 'anterior touch (ALM/AVM)']];
 
-let liveTimer = null;
-function stopLive() { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } }
+let liveTimer = null, scanBench = null;
+function stopLive() {
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  if (scanBench) { scanBench.stop(); scanBench = null; }
+}
 
 function renderScanner(el) {
   el.innerHTML = `<div class="panel-inner">
     <div class="eyebrow">Part 2 · Electronics &amp; hardware</div>
     <h2>Ultrasound scanner — read &amp; write</h2>
-    <p style="max-width:64ch">Two live subsystems over the running brain. Effects appear in
-    the <b>Brain template</b> view. v1 uses simulated adapters behind the real
+    <p style="max-width:72ch">The two hardware halves of the BCI, live on the
+    <b>currently-loaded brain</b>. <b>🔊 Sonogenetics</b> writes — aim the focused ultrasound
+    (<b>click the tissue</b>) and deliver a pulse to excite or inhibit the neurons there.
+    <b>🟢 Neural dust</b> reads — motes backscatter the local activity (the trace + the stats
+    below). v1 uses simulated adapters behind the real
     <code>NeuralInput</code>/<code>NeuralOutput</code> contracts.</p>
-    <div class="pgrid">
-      <div class="card">
-        <span class="chip allow">WRITE</span><b style="margin-left:.4rem">Sonogenetics</b>
-        <label class="ctl" style="margin-top:.6rem">focus
-          <select id="sc-target">${TARGETS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
-        <label class="ctl">gain <input id="sc-gain" type="range" min="1" max="6" step="0.5" value="3.4"><span id="sc-gain-v">3.4</span></label>
-        <button class="btn" id="sc-pulse" style="margin-top:.5rem">🔊 Deliver ultrasound pulse</button>
-      </div>
-      <div class="card">
-        <span class="chip allow">READ</span><b style="margin-left:.4rem">Neural dust</b>
-        <div class="statrow"><span>active motes</span><b id="sc-firing">—</b></div>
-        <div class="statrow"><span>mean backscatter</span><b id="sc-mean">—</b></div>
-        <div class="statrow"><span>decoded locomotion</span><b id="sc-loco">—</b></div>
-        <div class="muted small">1 mote / neuron (idealized) · updates live</div>
-      </div>
+    <div class="sc-controls">
+      <label class="ctl">effect
+        <select id="sc-sign"><option value="1">excite (cation)</option><option value="-1">inhibit (anion)</option></select></label>
+      <label class="ctl">acoustic pressure <input id="sc-gain" type="range" min="1" max="7" step="0.5" value="4"><span id="sc-gain-v">4</span></label>
+      <button class="btn act" id="sc-pulse">🔊 Deliver ultrasound pulse</button>
     </div>
+    <canvas id="sc-canvas" class="bench-canvas" style="cursor:crosshair"></canvas>
+    <div class="pgrid" style="margin-top:12px">
+      <div class="card"><div class="label">active motes</div><b id="sc-firing">—</b><p class="muted">neural-dust backscatter</p></div>
+      <div class="card"><div class="label">mean backscatter</div><b id="sc-mean">—</b><p class="muted">population read-out</p></div>
+      <div class="card"><div class="label">readout now</div><b id="sc-now">—</b><p class="muted">at the recording sites</p></div>
+    </div>
+    <div class="muted small">Click anywhere on the tissue to move the ultrasound focus; the effect propagates through the <b>real connectome</b>.</div>
   </div>`;
+
+  const data = window.__connectome;
+  const canvas = el.querySelector('#sc-canvas');
   el.querySelector('#sc-gain').addEventListener('input', (e) => { el.querySelector('#sc-gain-v').textContent = e.target.value; });
+
+  if (!data) { canvas.style.display = 'none'; return; }
+  requestAnimationFrame(() => {
+    scanBench = new TestBench(canvas, data,
+      { sensitivity: 1, conductance: 1, sign: 1, target: '', locus: [0.5, 0.45] }, null, { interactive: true });
+    scanBench.startLive();
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (!scanBench) return;
+    const r = canvas.getBoundingClientRect();
+    scanBench.aimAt(e.clientX - r.left, e.clientY - r.top);
+  });
   el.querySelector('#sc-pulse').addEventListener('click', () => {
-    const s = window.__sim; if (!s) return;
-    s.stimulateRole(el.querySelector('#sc-target').value, +el.querySelector('#sc-gain').value);
+    if (scanBench) scanBench.firePulse(+el.querySelector('#sc-sign').value, +el.querySelector('#sc-gain').value);
   });
   liveTimer = setInterval(() => {
-    const s = window.__sim; if (!s) return;
-    let f = 0, m = 0; for (let i = 0; i < s.n; i++) { if (s.act[i] > 0.1) f++; m += s.act[i]; }
-    el.querySelector('#sc-firing').textContent = f;
-    el.querySelector('#sc-mean').textContent = (m / s.n).toFixed(3);
-    const loco = s.locomotion();
-    el.querySelector('#sc-loco').textContent = `${loco >= 0 ? '+' : ''}${loco.toFixed(3)} (${loco < -0.02 ? 'reverse' : loco > 0.02 ? 'forward' : 'idle'})`;
+    if (!scanBench) return;
+    const s = scanBench.liveStats();
+    el.querySelector('#sc-firing').textContent = s.motesActive;
+    el.querySelector('#sc-mean').textContent = s.backscatter;
+    el.querySelector('#sc-now').textContent = s.readout.toFixed(3);
   }, 150);
 }
 

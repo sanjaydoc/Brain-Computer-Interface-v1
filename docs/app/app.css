@@ -50,6 +50,12 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .chip.ok { color: var(--ok); border: 1.5px solid var(--ok); background: transparent; }
 .chip.no { color: var(--no); border: 1.5px solid var(--no); background: transparent; }
 
+/* scanner controls — aim + pulse the ultrasound over the connectome */
+.sc-controls { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 16px 0; }
+.sc-controls .ctl { flex-direction: column; align-items: flex-start; gap: .3rem; font-size: .8rem; color: var(--muted); }
+.sc-controls select { font-family: var(--sans); font-size: .9rem; padding: .4rem .5rem;
+  border: 1px solid var(--hair); border-radius: var(--radius-sm); background: var(--paper); color: var(--ink); }
+
 /* molecular test bench — the visible BCI loop on the selected connectome */
 #mol-bench { margin-top: 22px; }
 .bench-head { font-size: .92rem; margin-bottom: 8px; }

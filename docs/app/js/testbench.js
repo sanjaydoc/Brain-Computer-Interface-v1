@@ -11,9 +11,11 @@
 import { BrainSim } from './sim.js';
 
 export class TestBench {
-  constructor(canvas, data, channel, onDone) {
+  constructor(canvas, data, channel, onDone, opts = {}) {
     this.c = canvas; this.ctx = canvas.getContext('2d');
     this.data = data; this.ch = channel; this.onDone = onDone;
+    this.interactive = !!opts.interactive;   // Scanner mode: aim + pulse on demand, free-running
+    this.usPulse = 0; this.pulse = null;      // active pulse envelope for interactive mode
     this.sim = new BrainSim(data);
     this.resize();
     this._project();
@@ -46,24 +48,31 @@ export class TestBench {
     const ox = mL + ((this.w - mL - mR) - (mxx - mnx) * s) / 2;
     const oy = mT + ((this.h - mT - mB) - (mxy - mny) * s) / 2;
     this.P = new Array(n);
-    for (let i = 0; i < n; i++) this.P[i] = [ox + (pos[i][0] - mnx) * s, oy + (pos[i][2] - mny) * s];
+    let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const px = ox + (pos[i][0] - mnx) * s, py = oy + (pos[i][2] - mny) * s;
+      this.P[i] = [px, py];
+      bx0 = Math.min(bx0, px); bx1 = Math.max(bx1, px); by0 = Math.min(by0, py); by1 = Math.max(by1, py);
+    }
+    this.bbox = [bx0, bx1, by0, by1];
   }
 
-  // ultrasound focal spot: the target population's centroid if it's a named role, else the
-  // most-connected neuron (a natural hub to poke).
+  // ultrasound focal spot. Priority: a named worm command population (the dropdown), else the
+  // molecule's own EXPRESSION LOCUS derived from its sequence (so different molecules land on
+  // different tissue), else the most-connected hub.
   _pickFocus() {
     const roleIdx = this.sim.roleIdx[this.ch.target];
-    let idx;
     if (roleIdx && roleIdx.length) {
       let fx = 0, fy = 0; for (const i of roleIdx) { fx += this.P[i][0]; fy += this.P[i][1]; }
       this.focus = [fx / roleIdx.length, fy / roleIdx.length];
-      idx = roleIdx[0];
+    } else if (this.ch.locus) {
+      const [x0, x1, y0, y1] = this.bbox;
+      this.focus = [x0 + this.ch.locus[0] * (x1 - x0), y0 + this.ch.locus[1] * (y1 - y0)];
     } else {
       const deg = this.data.outdeg || [];
-      idx = deg.length ? deg.indexOf(Math.max(...deg)) : Math.floor(this.P.length / 2);
+      const idx = deg.length ? deg.indexOf(Math.max(...deg)) : Math.floor(this.P.length / 2);
       this.focus = this.P[idx].slice();
     }
-    this.focusIdx = idx;
   }
 
   // neurons the focused ultrasound reaches: nearest ~12% to the focus, Gaussian-weighted by
@@ -101,25 +110,16 @@ export class TestBench {
   }
   stop() { this.stopped = true; cancelAnimationFrame(this.raf); }
 
-  _tick() {
-    this.t++;
-    // timeline: baseline → ultrasound pulse (write) → propagate + read
-    if (this.t < 55) this.phase = 'baseline';
-    else if (this.t < 92) this.phase = 'write';
-    else this.phase = 'read';
+  // SONOGENETICS WRITE — inject current into the focal expressing neurons. signedGain already
+  // carries the sign (+ cation/excite, − anion/inhibit); env is the 0..1 pulse envelope.
+  _write(signedGain, env) {
+    this.usPulse = env;
+    const g = signedGain * env;
+    for (const [i, wgt] of this.expr) this.sim.stim[i] += g * wgt * 0.12;
+  }
 
-    // SONOGENETICS WRITE — during the pulse, open the channel at the focus. Current = sign ×
-    // sensitivity × conductance × focal weight × pulse envelope. Sign +1 = cation (excite),
-    // −1 = anion (inhibit → negative stim hyperpolarizes).
-    this.usPulse = this.phase === 'write' ? Math.sin(((this.t - 55) / 37) * Math.PI) : 0;
-    if (this.phase === 'write') {
-      const gain = 5.5 * this.ch.sensitivity * this.ch.conductance * this.ch.sign * this.usPulse;
-      for (const [i, wgt] of this.expr) this.sim.stim[i] += gain * wgt * 0.12;
-    }
-
-    this.sim.step();
-
-    // NEURAL DUST READ — each mote reports the mean activity of the neurons it senses.
+  // NEURAL DUST READ — each mote reports the mean activity of the neurons it senses.
+  _read() {
     let dustSum = 0;
     for (const mote of this.dust) {
       let a = 0; for (const j of mote.sense) a += this.sim.act[j];
@@ -127,6 +127,48 @@ export class TestBench {
     }
     this.readout.push(dustSum / this.dust.length);
     if (this.readout.length > 220) this.readout.shift();
+  }
+
+  // -- interactive (Scanner) mode: free-running loop, aim + pulse on demand -----------------
+  startLive() {
+    const loop = () => {
+      if (this.stopped) return;
+      if (this.pulse) {                          // an active user pulse
+        const env = Math.sin((this.pulse.t / 34) * Math.PI);
+        if (env > 0 && this.pulse.t < 34) { this._write(this.pulse.g, env); this.pulse.t++; }
+        else { this.pulse = null; this.usPulse = 0; }
+      } else this.usPulse = 0;
+      this.sim.step();
+      this._read();
+      this._draw();
+      this.raf = requestAnimationFrame(loop);
+    };
+    loop();
+  }
+  aimAt(px, py) {   // set the ultrasound focus from a canvas click
+    this.focus = [px, py]; this._pickExpressing(); this.exprIdx = this.expr.map((e) => e[0]);
+  }
+  firePulse(sign, gain) { this.pulse = { t: 0, g: sign * gain }; }   // signed gain
+  liveStats() {
+    let f = 0, m = 0; for (let i = 0; i < this.sim.n; i++) { if (this.sim.act[i] > 0.1) f++; m += this.sim.act[i]; }
+    return { motesActive: f, backscatter: +(m / this.sim.n).toFixed(3), readout: this.readout.at(-1) || 0 };
+  }
+
+  _tick() {
+    this.t++;
+    // timeline: baseline → ultrasound pulse (write) → propagate + read
+    if (this.t < 55) this.phase = 'baseline';
+    else if (this.t < 92) this.phase = 'write';
+    else this.phase = 'read';
+
+    // Sign +1 = cation (excite), −1 = anion (inhibit → negative stim hyperpolarizes).
+    if (this.phase === 'write') {
+      const env = Math.sin(((this.t - 55) / 37) * Math.PI);
+      this._write(5.5 * this.ch.sensitivity * this.ch.conductance * this.ch.sign, env);
+    } else this.usPulse = 0;
+
+    this.sim.step();
+    this._read();
 
     // Verdict = the focal (channel-bearing) neurons' activity RELATIVE to the whole network.
     // Absolute firing is misleading (a strong focal excite raises global inhibition / can seize
@@ -222,9 +264,16 @@ export class TestBench {
     // --- captions -----------------------------------------------------------------------
     ctx.fillStyle = 'rgba(80,80,92,0.95)'; ctx.font = '600 11px system-ui, sans-serif';
     ctx.fillText('🔊 sonogenetics ultrasound (write)', tx + 26, top - 2);
-    const label = this.phase === 'baseline' ? 'baseline — resting activity'
-      : this.phase === 'write' ? `ultrasound pulse — ${this.ch.sign > 0 ? 'cation channel opens (excite)' : 'anion channel opens (inhibit)'}`
-        : 'reading the evoked response';
+    let label;
+    if (this.interactive) {
+      label = this.usPulse > 0.01
+        ? `ultrasound pulse — ${this.pulse && this.pulse.g > 0 ? 'exciting' : 'inhibiting'} the focus`
+        : 'aim: click the tissue to move the focus · then deliver a pulse';
+    } else {
+      label = this.phase === 'baseline' ? 'baseline — resting activity'
+        : this.phase === 'write' ? `ultrasound pulse — ${this.ch.sign > 0 ? 'cation channel opens (excite)' : 'anion channel opens (inhibit)'}`
+          : 'reading the evoked response';
+    }
     ctx.fillStyle = 'rgba(47,111,237,0.95)'; ctx.font = '600 11px system-ui, sans-serif';
     ctx.fillText(label, 24, 14);
   }
