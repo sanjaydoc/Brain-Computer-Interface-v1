@@ -255,14 +255,18 @@ The browser demo and the Python engine (`bci run`) run the **same** model.
 
 Run the full cockpit locally in one command. Full command reference: **[RUN.md](RUN.md)**.
 
-**Windows (PowerShell)** — no activation needed, call the venv Python directly:
+**Windows (PowerShell):**
 ```powershell
 git clone https://github.com/sanjaydoc/Brain-Computer-Interface-v1.git
 cd Brain-Computer-Interface-v1
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev,api]"
-.\.venv\Scripts\python.exe -m bci.cli serve
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process   # allow venv activation (this window only)
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev,api]"
+bci serve
 ```
+> No activation? Skip the two middle lines and call the venv Python directly:
+> `.\.venv\Scripts\python.exe -m pip install -e ".[dev,api]"` then `.\.venv\Scripts\python.exe -m bci.cli serve`
 
 **macOS / Linux:**
 ```bash
