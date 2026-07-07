@@ -300,6 +300,15 @@ stimBtn('stim-post', 'touchPost');
 stimBtn('stim-fwd', 'fwd');
 stimBtn('stim-rev', 'rev');
 
+// PLM is the teaching moment: reveal *why* posterior touch barely moves the worm.
+$('stim-post').addEventListener('click', () => {
+  const note = $('plm-note');
+  note.hidden = false;
+  note.classList.remove('flash');   // restart the highlight animation on every click
+  void note.offsetWidth;
+  note.classList.add('flash');
+});
+
 $('spin').addEventListener('change', e => { controls.autoRotate = e.target.checked; });
 $('edges').addEventListener('change', e => { if (edgeLines) edgeLines.visible = e.target.checked; });
 $('edgeop').addEventListener('input', e => { if (edgeLines) edgeLines.material.opacity = e.target.value / 100; });
