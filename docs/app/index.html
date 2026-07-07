@@ -95,6 +95,15 @@
           <div class="stim-note small">MICrONS is a slice of <b>visual cortex</b> — it has no motor output, so there's no body to drive. A patch of cortex is stimulated as visual input and the response ripples through the real connectome (see the raster). A <b>cortical-response demo</b> — real propagation, not a literal image (we don't have true retinotopy).</div>
         </div>
         <div class="muted small">…or click any neuron to stimulate it</div>
+
+        <hr class="divider" />
+        <div class="stim-group muted">closed-loop BCI · auto-drive to a target</div>
+        <label class="ctl"><input type="checkbox" id="loop-on" /> engage controller</label>
+        <label class="ctl" id="loop-target-row"><span id="loop-label">target</span>
+          <input type="range" id="loop-target" min="-100" max="100" step="1" value="0" />
+          <b id="loop-target-v" style="min-width:3.2em;text-align:right"></b></label>
+        <div class="stim-note small" id="loop-readout">The controller <b>reads the decoded state</b> and stimulates the connectome each tick to hold your target — a genuine closed loop (read → decide → write → read).</div>
+
         <hr class="divider" />
         <label class="ctl"><input type="checkbox" id="spin" checked /> auto-rotate</label>
         <label class="ctl"><input type="checkbox" id="edges" checked /> synapses</label>

@@ -224,6 +224,7 @@ function build(d) {
     $('fly-stim').hidden = kind !== 'fly';
     $('cortex-stim').hidden = kind !== 'cortex';
   }
+  setupLoopUI(kind);   // re-target the closed-loop controller at the new brain
 
   camera.position.set(...HOME); controls.target.copy(homeTarget);
   resize(); requestAnimationFrame(resize);
@@ -325,9 +326,14 @@ function animate() {
   requestAnimationFrame(animate);
   controls.update();
   if (running && sim) {
+    controlStep();                       // closed-loop BCI: write the correction before stepping
     for (let s = 0; s < 2; s++) sim.step();
     updateNeuronColors();
     driveAvatar();
+    if (loop.on && ctrl && (frame & 3) === 0) {   // live readout, throttled
+      $('loop-readout').innerHTML = `controller engaged → current `
+        + `<b>${ctrl.fmt(loop.curS)}</b> · target <b>${ctrl.fmt(loop.target)}</b>`;
+    }
   }
   // when paused, nothing moves — the avatar only moves from live brain activity
   renderer.render(scene, camera);
@@ -376,6 +382,65 @@ flyBtn('fly-right', 'right');
 
 // cortex — flash a spatial patch as "visual input" and watch it propagate
 $('cortex-flash').addEventListener('click', () => { if (sim) { sim.stimulatePatch(); if (!running) toggleRun(true); } });
+
+// --- closed-loop BCI controller ----------------------------------------------
+// A real BCI closes the loop: read the decoded state → decide → write stimulation → read
+// again. The metric is decoded live from the connectome and the correction is injected back
+// into it, so the target is reached by the simulation itself, not scripted. The actuator is
+// whatever motor read-out the loaded brain has (worm command circuit / fly descending / cortex).
+let loop = { on: false, target: 0, cur: 0, curS: 0, err: 0, I: 0 };
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+let ctrl = null;
+// metric/drive read the LIVE module `sim` (not a captured ref) so they always act on the
+// currently-loaded brain. Each controller is PI (integral removes steady-state error on the
+// noisy decoded metric); targets span the metric's real achievable range.
+function makeController(kind) {
+  if (kind === 'fly') return {
+    label: 'flight thrust', slider: [0, 100, 1, 40], toTarget: (v) => v / 100 * 0.45,
+    metric: () => sim.flight().thrust,
+    drive: (err) => { loop.I = clamp(loop.I + err, 0, 1.2); sim.stimulateFly('thrust', clamp(9 * err + 4 * loop.I, 0, 3)); },
+    fmt: (x) => `${Math.round(x / 0.45 * 100)}%`,
+  };
+  if (kind === 'cortex') return {
+    label: 'cortex firing', slider: [2, 40, 1, 18], toTarget: (v) => v / 100,
+    metric: () => { let f = 0; for (let i = 0; i < sim.n; i++) if (sim.act[i] > 0.1) f++; return f / sim.n; },
+    drive: (err) => { sim.bias = clamp(sim.bias + err * 0.05, 0, 0.4); },   // bias IS the integrator
+    fmt: (x) => `${Math.round(x * 100)}%`,
+  };
+  return {   // worm / anything with a fwd/rev command circuit
+    label: 'crawl · ⟵ rev · fwd ⟶', slider: [-100, 100, 1, 0], toTarget: (v) => v / 100 * 0.40,
+    metric: () => sim.locomotion(),
+    drive: (err) => {
+      loop.I = clamp(loop.I + err, -2.5, 2.5);
+      const u = clamp(16 * err + 9 * loop.I, -9, 9);
+      if (u >= 0) sim.stimulateRole('fwd', u); else sim.stimulateRole('rev', -u);
+    },
+    fmt: (x) => `${x >= 0 ? '+' : ''}${x.toFixed(2)}`,
+  };
+}
+function setupLoopUI(kind) {
+  ctrl = makeController(kind);
+  const sl = $('loop-target'), [mn, mx, st, def] = ctrl.slider;
+  sl.min = mn; sl.max = mx; sl.step = st; sl.value = def;
+  $('loop-label').textContent = ctrl.label;
+  loop.on = false; loop.target = ctrl.toTarget(def); loop.I = 0; loop.curS = 0;
+  $('loop-on').checked = false;
+  $('loop-target-v').textContent = ctrl.fmt(loop.target);
+}
+function controlStep() {   // one read → decide → write cycle (called each frame while engaged)
+  if (!loop.on || !ctrl || !sim) return;
+  loop.cur = ctrl.metric();
+  loop.curS = loop.curS * 0.92 + loop.cur * 0.08;   // smooth the noisy decode for stable control
+  loop.err = loop.target - loop.curS;
+  ctrl.drive(loop.err);
+}
+$('loop-on').addEventListener('change', (e) => { loop.on = e.target.checked; loop.I = 0; if (loop.on && !running) toggleRun(true); });
+$('loop-target').addEventListener('input', (e) => {
+  if (!ctrl) return;
+  loop.target = ctrl.toTarget(+e.target.value); loop.I = 0;   // fresh integral for the new target
+  $('loop-target-v').textContent = ctrl.fmt(loop.target);
+});
+window.__controlStep = controlStep; window.__loop = loop;   // test / inspection hooks
 
 // PLM is the teaching moment: reveal *why* posterior touch barely moves the worm.
 $('stim-post').addEventListener('click', () => {
