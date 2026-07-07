@@ -151,8 +151,9 @@ export class TestBench {
     const loop = () => {
       if (this.stopped) return;
       if (this.pulse) {                          // an active user pulse
-        const env = Math.sin((this.pulse.t / 34) * Math.PI);
-        if (env > 0 && this.pulse.t < 34) { this._write(this.pulse.g, env); this.pulse.t++; }
+        // NB: the envelope sin(t/34·π) is 0 at t=0 — don't gate on env>0 or the pulse cancels
+        // itself on the first frame (that was the "pulse does nothing" bug).
+        if (this.pulse.t < 34) { this._write(this.pulse.g, Math.sin((this.pulse.t / 34) * Math.PI)); this.pulse.t++; }
         else { this.pulse = null; this.usPulse = 0; }
       } else this.usPulse = 0;
       this.sim.step();
@@ -241,21 +242,30 @@ export class TestBench {
     const tx = Math.max(72, Math.min(this.w - 210, this.focus[0])), top = 12;
     ctx.strokeStyle = '#2f6fed'; ctx.lineWidth = 3; ctx.beginPath();
     ctx.arc(tx, top - 8, 20, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();  // transducer arc
+    this.frame = (this.frame || 0) + 1;    // animation clock (works in assay + interactive)
     if (this.usPulse > 0.01) {
+      const fpx = this.focus[0], fpy = this.focus[1];
       // converging beam + travelling wavefronts down to the focus
       ctx.strokeStyle = `rgba(47,111,237,${0.25 + 0.5 * this.usPulse})`; ctx.lineWidth = 1.2;
-      for (const dx of [-18, 18]) { ctx.beginPath(); ctx.moveTo(tx + dx, top); ctx.lineTo(this.focus[0], this.focus[1]); ctx.stroke(); }
+      for (const dx of [-18, 18]) { ctx.beginPath(); ctx.moveTo(tx + dx, top); ctx.lineTo(fpx, fpy); ctx.stroke(); }
       for (let w = 0; w < 4; w++) {
-        const fr = ((this.t * 0.06 + w / 4) % 1);
-        const y = top + fr * (this.focus[1] - top), hw = 18 * (1 - fr);
+        const fr = ((this.frame * 0.06 + w / 4) % 1);
+        const y = top + fr * (fpy - top), hw = 18 * (1 - fr);
         ctx.globalAlpha = (1 - fr) * this.usPulse; ctx.beginPath();
         ctx.moveTo(tx - hw, y); ctx.lineTo(tx + hw, y); ctx.stroke();
       }
       ctx.globalAlpha = 1;
-      // focal glow
-      const g = ctx.createRadialGradient(this.focus[0], this.focus[1], 1, this.focus[0], this.focus[1], 26);
-      g.addColorStop(0, `rgba(47,111,237,${0.35 * this.usPulse})`); g.addColorStop(1, 'rgba(47,111,237,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.focus[0], this.focus[1], 26, 0, 6.283); ctx.fill();
+      // expanding ultrasound "ping" shockwaves from the focus — makes the pulse obvious
+      for (let k = 0; k < 3; k++) {
+        const fr = ((this.frame * 0.045 + k / 3) % 1), rad = 6 + fr * 80;
+        ctx.strokeStyle = `rgba(47,111,237,${(1 - fr) * this.usPulse * 0.7})`; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(fpx, fpy, rad, 0, 6.283); ctx.stroke();
+      }
+      // focal glow + bright core
+      const g = ctx.createRadialGradient(fpx, fpy, 1, fpx, fpy, 40);
+      g.addColorStop(0, `rgba(47,111,237,${0.5 * this.usPulse})`); g.addColorStop(1, 'rgba(47,111,237,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fpx, fpy, 40, 0, 6.283); ctx.fill();
+      ctx.fillStyle = `rgba(47,111,237,${this.usPulse})`; ctx.beginPath(); ctx.arc(fpx, fpy, 5, 0, 6.283); ctx.fill();
     }
 
     // --- NEURAL DUST motes (READ) -------------------------------------------------------

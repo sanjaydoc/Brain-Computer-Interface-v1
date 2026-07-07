@@ -67,6 +67,16 @@ const chanType = (ch) => ch.sign > 0 ? 'cation · excite' : 'anion · inhibit';
 
 let _data = null, _samples = null, _live = null, _bench = null;
 
+// exposed so the Scanner can load a molecule's channel and use its real sensitivity/conductance
+export { channelSpec, chanType };
+export async function demoChannels(modality = 'smiles', n = 4) {
+  const pool = (await samples())[modality] || (await samples()).smiles;
+  return Array.from({ length: n }, (_, i) => {
+    const seq = pool[i % pool.length];
+    return { id: `${modality.slice(0, 3)}-${String(i).padStart(2, '0')}`, sequence: seq, modality, ...channelSpec(seq, modality) };
+  });
+}
+
 async function connectomeData() {
   if (window.__connectome) return window.__connectome;   // the currently-loaded brain
   if (!_data) _data = await fetch('./data/celegans.json').then((r) => r.json());
