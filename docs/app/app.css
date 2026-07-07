@@ -47,6 +47,14 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   border: 1px solid var(--hair); border-radius: var(--radius-sm); background: var(--paper); color: var(--ink); }
 #mol-table td { vertical-align: middle; }
 .mol-res { font-size: .8rem; margin-left: .4rem; }
+.chip.ok { color: var(--ok); border: 1.5px solid var(--ok); background: transparent; }
+.chip.no { color: var(--no); border: 1.5px solid var(--no); background: transparent; }
+
+/* molecular test bench — the visible BCI loop on the selected connectome */
+#mol-bench { margin-top: 22px; }
+.bench-head { font-size: .92rem; margin-bottom: 8px; }
+.bench-canvas { width: 100%; height: 400px; display: block;
+  border: 1px solid var(--hair); border-radius: 14px; background: var(--paper-2); }
 .viewer { position: relative; flex: 1; overflow: hidden; background:
   radial-gradient(120% 120% at 50% 20%, #ffffff 0%, #f3f3f5 70%, #ececef 100%); }
 .viewer canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
