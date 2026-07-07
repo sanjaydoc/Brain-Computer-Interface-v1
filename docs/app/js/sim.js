@@ -27,8 +27,17 @@ export class BrainSim {
     this.idx = {};
     data.ids.forEach((name, i) => { this.idx[name] = i; });
 
+    // Excitatory/inhibitory sign. If the connectome ships neurotransmitters (FlyWire), use
+    // them — GABA + glutamate inhibit (insect GluClα); everything else excites. Otherwise
+    // fall back to the C. elegans name heuristic. Real E/I balance keeps the dense fly brain
+    // in a sustained, structured regime instead of synchronized bursting.
     this.sign = new Float32Array(n).fill(1);
-    data.ids.forEach((name, i) => { if (INHIBITORY.some((re) => re.test(name))) this.sign[i] = -1; });
+    if (data.nt && data.nt.length === n) {
+      const INH = new Set(['GABA', 'GLUT', 'GLUTAMATE']);
+      data.nt.forEach((t, i) => { if (INH.has(String(t).toUpperCase())) this.sign[i] = -1; });
+    } else {
+      data.ids.forEach((name, i) => { if (INHIBITORY.some((re) => re.test(name))) this.sign[i] = -1; });
+    }
 
     // per-post synaptic normalization: divide each neuron's incoming weights by their
     // total magnitude → no hub saturates, and relative pathway strengths are preserved.
@@ -44,6 +53,21 @@ export class BrainSim {
     this.roleIdx = {};
     for (const [k, names] of Object.entries(ROLES))
       this.roleIdx[k] = names.map((nm) => this.idx[nm]).filter((x) => x !== undefined);
+
+    // Fly motor decode: in Drosophila the DESCENDING neurons are the brain's motor-command
+    // output to the wings/legs, and MOTOR neurons drive the muscles. Their live firing is the
+    // flight drive; left/right descending asymmetry (by soma position) is the turn command.
+    // Detected from the FlyWire super_class labels in `types` — present only for the fly.
+    this.descIdx = []; this.descLeft = []; this.descRight = []; this.motorIdx = [];
+    if (data.types && data.pos) {
+      const xs = data.pos.map((p) => p[0]).slice().sort((a, b) => a - b);
+      const midX = xs[xs.length >> 1] || 0;
+      data.types.forEach((t, i) => {
+        if (t === 'descending') { this.descIdx.push(i); (data.pos[i][0] < midX ? this.descLeft : this.descRight).push(i); }
+        else if (t === 'motor') this.motorIdx.push(i);
+      });
+    }
+    this.hasFlight = this.descIdx.length > 5;
 
     this.tau = 20; this.vth = 1.0; this.vreset = 0; this.refrLen = 4;
     // background excitability → the network is spontaneously active, so the command
@@ -94,6 +118,16 @@ export class BrainSim {
 
   // locomotion decoded live from the command neurons — emerges from the connectome.
   locomotion() { return this.roleActivity('fwd') - this.roleActivity('rev'); }
+
+  meanAct(ids) { if (!ids || !ids.length) return 0; let s = 0; for (const i of ids) s += this.act[i]; return s / ids.length; }
+
+  // Flight decoded live from the fly's descending + motor neurons — emerges from the
+  // connectome. thrust = motor-command drive; yaw = left/right descending asymmetry.
+  flight() {
+    const thrust = 0.5 * (this.meanAct(this.descIdx) + this.meanAct(this.motorIdx));
+    const yaw = this.meanAct(this.descRight) - this.meanAct(this.descLeft);
+    return { thrust, yaw };
+  }
 
   reset() { this.v.fill(0); this.refr.fill(0); this.act.fill(0); this.stim.fill(0); this.pop = 0; this.t = 0; }
 }
