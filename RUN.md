@@ -151,15 +151,23 @@ Synapse Table / Skeletons — you don't need them):
 |----------|------|------|
 | **Connections (Filtered)** | ~68 MB | the wiring — **required** |
 | **Marked Neuron Coordinates** | ~5 MB | real 3D positions — **required** |
-| **Cell Types** | ~0.9 MB | colour-by-type — optional |
+| **Neurotransmitter Type Predictions** | ~1.7 MB | real excitatory/inhibitory **sign** (ACh excites; GABA + glutamate inhibit) |
+| **Classification / Hierarchical Annotations** | ~0.9 MB | `super_class` grouping (optic / central / sensory / motor …) |
+| **Cell Types** | ~0.9 MB | finer cell-type labels — optional |
 
 ```bash
 python scripts/fetch_drosophila.py \
-    --connections "Connections (Filtered).csv" \
-    --coordinates "Marked Neuron Coordinates.csv" \
-    --types "Cell Types.csv" \
+    --connections    "Connections (Filtered).csv" \
+    --coordinates    "Marked Neuron Coordinates.csv" \
+    --neurotransmitters "Neurotransmitter Type Predictions.csv" \
+    --classification "Classification Hierarchical Annotations.csv" \
+    --types          "Cell Types.csv" \
     --max-neurons 20000
 ```
+With the neurotransmitter file the simulation respects real **excitation vs inhibition**
+(instead of treating every fly neuron as excitatory); classification gives clean
+colour-by-region groups. All but `--connections` are optional, so the command degrades
+gracefully if you skip a file.
 
 Each script writes a CSV cache under `data/connectomes/<name>/` (used by the Python engine)
 and a compact `docs/app/data/<name>.json` (used by the browser). `--max-neurons` controls the

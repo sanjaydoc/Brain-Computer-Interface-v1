@@ -28,6 +28,9 @@ class Connectome:
     types: np.ndarray        # (N,) str/object  — cell type / class
     pos: np.ndarray          # (N, 3) float32   — 3D coordinates (for viz + acoustic addressing)
     weights: sp.csr_matrix   # (N, N) sparse    — weights[pre, post]; nnz = number of synapses
+    sign: np.ndarray | None = None  # (N,) float32 in {+1,-1} — per-neuron excit/inhib, if known
+                                    # (e.g. from FlyWire neurotransmitter predictions). None →
+                                    # the engine falls back to a name-based heuristic.
 
     def __post_init__(self) -> None:
         n = self.n_neurons
@@ -37,6 +40,8 @@ class Connectome:
             raise ValueError("pos must be (N, 3)")
         if self.weights.shape != (n, n):
             raise ValueError(f"weights must be ({n}, {n}), got {self.weights.shape}")
+        if self.sign is not None and self.sign.shape[0] != n:
+            raise ValueError("sign must have one entry per neuron")
 
     @property
     def n_neurons(self) -> int:
