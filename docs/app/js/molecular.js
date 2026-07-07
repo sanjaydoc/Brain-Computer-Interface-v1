@@ -1,8 +1,10 @@
-// Biomolecules panel (Part 1) — Generate → Test on connectome.
-// Live mode: calls the backend API (real De-Novo-LLM / NVIDIA NIM). Demo mode (hosted,
-// no backend): bundled samples + a browser assay using the same BrainSim. Two buttons.
+// Biomolecules panel (Part 1) — Generate → Test on the connectome, with a visible test bench.
+// Live mode: calls the backend API (real De-Novo-LLM / NVIDIA NIM). Demo mode (hosted, no
+// backend): bundled samples + a browser assay. Pressing Test opens a canvas showing the
+// SELECTED connectome and runs the real BCI loop on it: sonogenetics ultrasound writes →
+// connectome responds → neural dust reads. See testbench.js.
 
-import { BrainSim } from './sim.js';
+import { TestBench } from './testbench.js';
 
 const TARGETS = [
   ['rev', 'reverse command (AVA) → reversal'],
@@ -10,6 +12,7 @@ const TARGETS = [
   ['touchPost', 'posterior touch (PLM)'],
 ];
 const HYDRO = new Set('AILMFWVY');
+const BASIC = new Set('KRH'), ACIDIC = new Set('DE');
 
 function sensitivity(seq, modality) {
   const protein = modality === 'protein' || modality === 'peptide';
@@ -25,29 +28,35 @@ function sensitivity(seq, modality) {
   return +(0.2 + 0.65 * Math.max(0, Math.min(1, f))).toFixed(3);
 }
 
-// browser assay: fresh sim, warm up, ultrasound-write to target × sensitivity, measure.
-function browserAssay(data, target, sens) {
-  const s = new BrainSim(data);
-  for (let k = 0; k < 120; k++) s.step();
-  const base = s.locomotion();
-  s.stimulateRole(target, 2.2 * sens);
-  let peak = 0, lp = 0;
-  for (let k = 0; k < 80; k++) {
-    s.step();
-    let f = 0; for (let i = 0; i < s.n; i++) if (s.act[i] > 0.1) f++;
-    peak = Math.max(peak, f);
-    const d = s.locomotion() - base;
-    if (Math.abs(d) > Math.abs(lp)) lp = d;
+// sequence → channel biophysics (a TRANSPARENT composition proxy, not a validated predictor):
+//   sign        cation-selective (excitatory, +1) vs anion-selective (inhibitory, −1),
+//               from net residue/heteroatom charge
+//   sensitivity ultrasound coupling (hydrophobic / aromatic-ring content)
+//   conductance pore size proxy from length
+function channelSpec(seq, modality) {
+  const sens = sensitivity(seq, modality);
+  const s = seq.toUpperCase();
+  let sign, conductance;
+  if (modality === 'protein' || modality === 'peptide') {
+    const L = [...s].filter((c) => /[A-Z]/.test(c));
+    const pos = L.filter((c) => BASIC.has(c)).length, neg = L.filter((c) => ACIDIC.has(c)).length;
+    sign = (pos - neg) >= 0 ? 1 : -1;
+    conductance = +(0.5 + 0.5 * Math.min(1, L.length / 40)).toFixed(2);
+  } else {
+    const plus = (seq.match(/\+/g) || []).length, minus = (seq.match(/-/g) || []).length;
+    const nitro = (s.match(/N/g) || []).length, oxy = (s.match(/O/g) || []).length;
+    sign = (plus - minus) + (nitro - oxy) * 0.15 >= 0 ? 1 : -1;
+    conductance = +(0.5 + 0.5 * Math.min(1, seq.length / 50)).toFixed(2);
   }
-  return { peak_firing: peak, loco_response: +lp.toFixed(3),
-    direction: lp < -0.05 ? 'reverse' : (lp > 0.05 ? 'forward' : 'weak'),
-    score: +Math.min(1, Math.abs(lp) / 2).toFixed(3) };
+  return { sensitivity: sens, sign, conductance };
 }
 
-let _data = null, _samples = null, _live = null;
+const chanType = (ch) => ch.sign > 0 ? 'cation · excite' : 'anion · inhibit';
+
+let _data = null, _samples = null, _live = null, _bench = null;
 
 async function connectomeData() {
-  if (window.__connectome) return window.__connectome;
+  if (window.__connectome) return window.__connectome;   // the currently-loaded brain
   if (!_data) _data = await fetch('./data/celegans.json').then((r) => r.json());
   return _data;
 }
@@ -72,20 +81,35 @@ export async function renderBiomolecules(el) {
   el.innerHTML = `<div class="panel-inner">
     <div class="eyebrow">Part 1 · Molecular engineering</div>
     <h2>Generate biomolecules → test on the connectome ${badge}</h2>
-    <p style="max-width:66ch">De-novo channels from <a href="https://github.com/sanjaydoc/De-Novo-LLM">De-Novo-LLM</a>.
-    Each generated molecule becomes a <b>sonogenetic channel</b> with a modeled ultrasound
-    sensitivity (a transparent composition proxy — not a validated predictor). Test it and the
-    <b>real connectome simulation</b> responds.</p>
+    <p style="max-width:70ch">De-novo channels from <a href="https://github.com/sanjaydoc/De-Novo-LLM">De-Novo-LLM</a>.
+    Each molecule's <b>sequence sets a channel</b> — cation (excitatory) or anion (inhibitory),
+    an ultrasound sensitivity, and a conductance (a transparent composition proxy, <i>not</i> a
+    validated predictor). Press <b>Test</b> and the loop runs on the <b>currently-loaded brain</b>:
+    ultrasound writes → the real connectome responds → neural dust reads.</p>
     <div class="mol-controls">
       <label>modality
         <select id="mol-modality"><option>smiles</option><option>protein</option><option>dna</option></select></label>
-      <label>express in
+      <label>focus on
         <select id="mol-target">${TARGETS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
       <label>count <input id="mol-n" type="number" value="6" min="1" max="20" style="width:4rem"></label>
       <button class="btn" id="mol-gen">▶ Generate</button>
     </div>
-    <table id="mol-table"><thead><tr><th>channel</th><th>sequence</th><th>sensitivity</th><th>test → response</th></tr></thead>
-      <tbody><tr><td colspan="4" class="muted">Press Generate to design candidate channels.</td></tr></tbody></table>
+    <table id="mol-table"><thead><tr><th>channel</th><th>sequence</th><th>type</th><th>sens</th><th>g</th><th>test</th></tr></thead>
+      <tbody><tr><td colspan="6" class="muted">Press Generate to design candidate channels.</td></tr></tbody></table>
+
+    <section id="mol-bench" hidden>
+      <div class="bench-head">
+        <b>Test bench</b> · <span id="bench-cx" class="muted"></span> · channel <b id="bench-ch">—</b>
+        <span id="bench-verdict"></span>
+      </div>
+      <canvas id="bench-canvas" class="bench-canvas"></canvas>
+      <div class="muted small" style="margin-top:.4rem">
+        <b>🔊 Sonogenetics ultrasound</b> (write): the beam focuses on a spot and opens the channel there.
+        The <b>real connectome</b> responds and the activity propagates.
+        <b>🟢 Neural dust</b> (read): motes record the evoked response (trace, bottom).
+        This is the full BCI loop — <b>sequence → neural effect</b> — on the brain you have loaded.
+      </div>
+    </section>
   </div>`;
 
   el.querySelector('#mol-gen').addEventListener('click', () => generate(el, live));
@@ -96,7 +120,7 @@ async function generate(el, live) {
   const target = el.querySelector('#mol-target').value;
   const n = Math.max(1, Math.min(20, +el.querySelector('#mol-n').value || 6));
   const tbody = el.querySelector('#mol-table tbody');
-  tbody.innerHTML = `<tr><td colspan="4" class="muted">Generating…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="6" class="muted">Generating…</td></tr>`;
 
   let channels;
   if (live) {
@@ -104,39 +128,49 @@ async function generate(el, live) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modality, n, target }),
     }).then((r) => r.json());
-    channels = res.channels;
+    channels = res.channels.map((ch) => ({ ...channelSpec(ch.sequence, ch.modality), ...ch, target }));
   } else {
     const s = await samples();
     const pool = s[modality] || s.smiles;
     channels = Array.from({ length: n }, (_, i) => {
       const seq = pool[i % pool.length];
-      return { id: `${modality.slice(0, 3)}-${String(i).padStart(3, '0')}`, sequence: seq,
-        modality, sensitivity: sensitivity(seq, modality), target };
+      return { id: `${modality.slice(0, 3)}-${String(i).padStart(3, '0')}`, sequence: seq, modality, target, ...channelSpec(seq, modality) };
     });
   }
 
   tbody.innerHTML = channels.map((ch, i) => `<tr data-i="${i}">
     <td><b>${ch.id}</b></td>
-    <td class="mono" style="font-size:.78rem;max-width:22ch;overflow:hidden;text-overflow:ellipsis">${ch.sequence}</td>
+    <td class="mono" style="font-size:.76rem;max-width:20ch;overflow:hidden;text-overflow:ellipsis">${ch.sequence}</td>
+    <td><span class="chip ${ch.sign > 0 ? 'ok' : 'no'}">${chanType(ch)}</span></td>
     <td>${ch.sensitivity.toFixed(2)}</td>
-    <td><button class="btn act mol-test" data-i="${i}">Test ▶</button> <span class="mol-res muted"></span></td>
+    <td>${ch.conductance.toFixed(2)}</td>
+    <td><button class="btn act mol-test" data-i="${i}">Test ▶</button></td>
   </tr>`).join('');
 
   const data = await connectomeData();
-  tbody.querySelectorAll('.mol-test').forEach((btn) => btn.addEventListener('click', async () => {
-    const ch = channels[+btn.dataset.i];
-    const cell = btn.parentElement.querySelector('.mol-res');
-    cell.textContent = '…';
-    let r;
-    if (live) {
-      r = await fetch('/api/molecular/test', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sequence: ch.sequence, modality: ch.modality, sensitivity: ch.sensitivity, target: ch.target }),
-      }).then((x) => x.json());
-    } else {
-      r = browserAssay(data, ch.target, ch.sensitivity);
-    }
-    const cls = r.direction === 'reverse' ? 'no' : (r.direction === 'forward' ? 'ok' : 'muted');
-    cell.innerHTML = `<b style="color:var(--${cls === 'muted' ? 'muted' : cls})">${r.direction}</b> · loco ${r.loco_response} · ${r.peak_firing} firing · score ${r.score}`;
+  tbody.querySelectorAll('.mol-test').forEach((btn) => btn.addEventListener('click', () => {
+    runBench(el, data, channels[+btn.dataset.i]);
   }));
+}
+
+function runBench(el, data, ch) {
+  if (_bench) _bench.stop();
+  const bench = el.querySelector('#mol-bench');
+  bench.hidden = false;
+  el.querySelector('#bench-cx').textContent = `${data.name || 'connectome'} · ${data.n_neurons.toLocaleString()} neurons`;
+  el.querySelector('#bench-ch').textContent = `${ch.id} (${chanType(ch)}, sens ${ch.sensitivity.toFixed(2)}, g ${ch.conductance.toFixed(2)})`;
+  const verdict = el.querySelector('#bench-verdict');
+  verdict.innerHTML = ' · <span class="muted">running…</span>';
+  const canvas = el.querySelector('#bench-canvas');
+  bench.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  _bench = window.__bench = new TestBench(canvas, data, ch, (r) => {
+    const cls = r.direction === 'excited' ? 'ok' : (r.direction === 'suppressed' ? 'no' : 'muted');
+    const verb = r.direction === 'excited' ? 'drove firing in the targeted neurons'
+      : r.direction === 'suppressed' ? 'silenced the targeted neurons' : 'had little net effect';
+    verdict.innerHTML = ` · <b class="chip ${cls}">${r.direction}</b> `
+      + `<span class="muted small">${verb} · score ${r.score}</span>`;
+  });
+  // canvas needs a laid-out size before the bench measures it
+  requestAnimationFrame(() => { _bench.resize(); _bench.start(); });
 }
