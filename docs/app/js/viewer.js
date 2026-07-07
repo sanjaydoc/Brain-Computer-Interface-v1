@@ -88,11 +88,13 @@ function makeSynthetic(n, k = 8) {
 const FETCH_HINT = {
   microns: 'python scripts/fetch_microns.py --max-neurons 20000',
   drosophila: 'python scripts/fetch_drosophila.py --neurons neurons.csv --connections connections.csv',
+  mesoscale: 'python scripts/fetch_mouse_mesoscale.py   # then: bci load profiles/mouse.yaml',
 };
 
 function showFetchMsg(val) {
   const panel = $('panel'); if (!panel) return;
-  const nice = val === 'microns' ? 'MICrONS mouse cortex' : 'Drosophila (FlyWire)';
+  const nice = val === 'microns' ? 'MICrONS mouse cortex'
+    : val === 'mesoscale' ? 'Mouse mesoscale (Allen)' : 'Drosophila (FlyWire)';
   panel.innerHTML = `<div class="panel-inner">
     <div class="eyebrow">${val} · not cached in this browser</div>
     <h2>${nice} loads from a local fetch</h2>
@@ -114,7 +116,7 @@ function loadConnectome(val) {
       .catch(err => { const l = $('loading'); if (l) l.textContent = 'Failed: ' + err; });
   } else if (val.startsWith('synthetic:')) {
     build(makeSynthetic(+val.split(':')[1], 8));
-  } else if (val === 'microns' || val === 'drosophila') {
+  } else if (val === 'microns' || val === 'drosophila' || val === 'mesoscale') {
     fetch(`./data/${val}.json`)
       .then(r => { if (!r.ok) throw new Error('not cached'); return r.json(); })
       .then(build)

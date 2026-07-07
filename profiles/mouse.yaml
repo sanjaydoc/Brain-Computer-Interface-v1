@@ -1,0 +1,14 @@
+# Profile: mouse mesoscale — Rung 3 of the scale ladder.
+# A statistical, region-modular connectome built from the Allen mesoscale region graph
+# (procedural scaffold out of the box; `scripts/fetch_mouse_mesoscale.py` swaps in the real
+# Allen matrix). `n` sets the scale — the same code path runs 1e5 … 1e7+ headless.
+# Bump n toward ~71,000,000 on a big-memory machine; keep it ~1e5 for a laptop / the viewer.
+name: mouse_mesoscale
+
+connectome:
+  impl: mesoscale
+  params:
+    n: 100000
+    avg_degree: 16
+    n_regions: 213
+    seed: 0
