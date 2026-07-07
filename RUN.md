@@ -111,7 +111,52 @@ bci serve --host 0.0.0.0 --port 8080
 
 ---
 
-## 5. Tests
+## 5. Load a real large brain — the scale ladder (MICrONS / Drosophila)
+
+The North Star is the human brain (86 B neurons / ~100 T synapses). We climb toward it one
+real connectome at a time — every rung uses the **same** engine, renderer, and I/O contracts:
+
+| Rung | Connectome | Neurons | Status | How to load |
+|------|-----------|---------|--------|-------------|
+| 1 | *C. elegans* (worm) | 302 | ✅ bundled | `bci load profiles/worm.yaml` — default, no download |
+| 2a | MICrONS mouse visual cortex | ~200 k | ✅ fetch locally | `python scripts/fetch_microns.py` |
+| 2b | *Drosophila* (FlyWire) | ~130 k | ✅ fetch locally | `python scripts/fetch_drosophila.py` |
+| 3 | Mouse whole-brain | ~71 M | 🔜 planned | — |
+| ★ | Human | 86 B | 🎯 North Star | — |
+
+The worm is bundled; the big brains are **fetched on your own machine** (their data hosts —
+CAVE and FlyWire — aren't reachable from the hosted demo). Once fetched, they appear in the
+control-plane dropdown next to the brain-template tab and render with automatic level-of-detail
+(GPU point cloud + sampled synapses above 8 k neurons).
+
+### 2a — MICrONS mouse cortex
+```bash
+# macOS / Linux (needs internet + a free CAVE token)
+pip install caveclient
+python -c "from caveclient import CAVEclient; CAVEclient('minnie65_public').auth.setup_token(make_new=True)"
+python scripts/fetch_microns.py --max-neurons 20000
+```
+```powershell
+# Windows
+.\.venv\Scripts\python.exe -m pip install caveclient
+.\.venv\Scripts\python.exe -c "from caveclient import CAVEclient; CAVEclient('minnie65_public').auth.setup_token(make_new=True)"
+.\.venv\Scripts\python.exe scripts/fetch_microns.py --max-neurons 20000
+```
+
+### 2b — Drosophila (FlyWire Codex)
+Download the neurons + connections CSVs from <https://codex.flywire.ai/> → **Downloads**, then:
+```bash
+python scripts/fetch_drosophila.py --neurons neurons.csv --connections connections.csv --max-neurons 20000
+```
+
+Each script writes a CSV cache under `data/connectomes/<name>/` (used by the Python engine)
+and a compact `docs/app/data/<name>.json` (used by the browser). `--max-neurons` controls the
+downsample; the headless engine scales to millions, the browser is happiest under ~50 k.
+Re-run `bci serve`, then pick the brain from the dropdown.
+
+---
+
+## 6. Tests
 
 ```bash
 # macOS / Linux or activated venv
@@ -120,12 +165,13 @@ pytest
 # Windows, no activation
 .\.venv\Scripts\python.exe -m pytest
 ```
-22 tests: connectome loading, the emergent-locomotion behavior, I/O contracts, the live
-API, the molecular pipeline, and scalability (proven to 1,000,000+ neurons).
+28 tests: connectome loading, the Rung-2 sources (MICrONS / Drosophila), the emergent-locomotion
+behavior, I/O contracts, the live API, the molecular pipeline, and scalability (proven to
+1,000,000+ neurons).
 
 ---
 
-## 6. Regenerate the README figures (optional)
+## 7. Regenerate the README figures (optional)
 
 ```bash
 pip install -e ".[figures]"
@@ -144,7 +190,7 @@ python scripts/fetch_celegans.py
 
 ---
 
-## 7. Real biomolecule generation (De-Novo-LLM)
+## 8. Real biomolecule generation (De-Novo-LLM)
 
 The hosted web demo uses bundled samples (a browser can't run PyTorch). On your own machine,
 install your trained [De-Novo-LLM](https://github.com/sanjaydoc/De-Novo-LLM) so the
@@ -167,7 +213,7 @@ Generation backends are chosen automatically: **local GPU → NVIDIA NIM → bun
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
@@ -176,4 +222,4 @@ Generation backends are chosen automatically: **local GPU → NVIDIA NIM → bun
 | `The token '&&' is not a valid statement separator` | Old PowerShell — run each command on its own line (don't chain with `&&`). |
 | `bci` not found | Use `python -m bci.cli ...` (or `.\.venv\Scripts\python.exe -m bci.cli ...` on Windows). |
 | Port 8000 in use | `bci serve --port 8080` |
-| Biomolecules panel says "demo" | Real generation needs De-Novo-LLM installed (§7); the demo fallback still works. |
+| Biomolecules panel says "demo" | Real generation needs De-Novo-LLM installed (§8); the demo fallback still works. |
