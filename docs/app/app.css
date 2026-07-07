@@ -29,10 +29,14 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
 .stage { flex: 1; display: flex; min-height: 0; position: relative; }
 
-/* info-panel overlay for the non-viewer tabs */
+/* Non-brain tabs render as a frosted cockpit layer over the live 3D viewer — the
+   connectome keeps rendering behind, and the living avatar aside (.venv) stays visible,
+   so every tab feels like the Brain-template view rather than a flat white page. */
 .panel-overlay { position: absolute; inset: 0; z-index: 10; overflow: auto;
-  background: var(--paper); }
-.panel-inner { max-width: 920px; margin: 0 auto; padding: 32px 24px 64px; }
+  background: rgba(250,250,251,.90); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+:root[data-theme="dark"] .panel-overlay { background: rgba(18,18,20,.88); }
+.panel-inner { max-width: 880px; margin: 0 auto; padding: 30px 30px 64px; }
+.panel-inner > .eyebrow:first-child { color: var(--venv); }
 .panel-inner h2 { font-family: var(--serif); font-weight: 500; font-size: 2rem; margin: .2rem 0 1rem; }
 .panel-inner table { margin-top: 16px; }
 .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 18px 0; }
@@ -63,7 +67,9 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   border: 1px solid var(--hair); border-radius: 14px; background: var(--paper-2); }
 .viewer { position: relative; flex: 1; overflow: hidden; background:
   radial-gradient(120% 120% at 50% 20%, #ffffff 0%, #f3f3f5 70%, #ececef 100%); }
-.viewer canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+/* only the three.js renderer (a DIRECT child of .viewer) fills the stage — NOT the
+   bench canvases that now live inside the in-viewer #panel */
+.viewer > canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
 
 /* virtual-environment panel (the crawling worm) */
 .venv {
