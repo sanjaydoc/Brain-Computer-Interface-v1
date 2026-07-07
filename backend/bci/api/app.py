@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..connectome import sources
+from ..electronics import ElectronicsService
 from ..molecular import MolecularService, SonogeneticChannel, test_on_connectome
 from ..runtime import Runtime
 
@@ -36,6 +37,11 @@ class TestReq(BaseModel):
     sensitivity: float | None = None
     target: str = "rev"
     connectome: str = "celegans"
+
+
+class ElectronicsReq(BaseModel):
+    concept: str
+    backend: str = "auto"
 
 
 def _connectome_payload(impl: str) -> dict:
@@ -86,6 +92,17 @@ def create_app() -> FastAPI:
         else:
             ch = SonogeneticChannel.from_sequence(req.sequence, req.modality, 0, req.target)
         return test_on_connectome(c, ch)
+
+    # -- Electronics: concept → schematic + BOM (ported from inventor-studio-v3) --
+    electronics = ElectronicsService()
+
+    @app.get("/api/electronics/backends")
+    def electronics_backends() -> dict:
+        return electronics.backends()
+
+    @app.post("/api/electronics/generate")
+    def electronics_generate(req: ElectronicsReq) -> dict:
+        return electronics.generate(req.concept, backend=req.backend)
 
     @app.websocket("/ws")
     async def ws(websocket: WebSocket) -> None:

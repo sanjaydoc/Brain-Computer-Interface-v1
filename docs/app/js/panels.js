@@ -3,6 +3,7 @@
 // Virtual env is an info panel (the worm is live in the Brain template).
 
 import { renderBiomolecules, demoChannels, chanType } from './molecular.js';
+import { renderElectronics } from './electronics.js';
 import { TestBench } from './testbench.js';
 
 // Virtual env in stage mode: the live 3D brain shows behind (panel is transparent), the
@@ -235,18 +236,6 @@ const SCAFFOLDS = {
       ['Invent new waves', 'borrow the generator from inventor-studio-v3 to synthesize novel waveforms'],
     ], status: 'ultrasound live in Scanner · multi-wave bench next',
   },
-  electronics: {
-    eyebrow: 'Part · Electronics', title: 'Schematic & PCB generation',
-    intro: 'Generate the read/write electronics — bio-AFE, stimulator, MCU — as a schematic and PCB, ported from inventor-studio-v3 (Node → Python).',
-    pipe: [
-      ['Concept → schematic', 'an LLM emits components + connections (inventor-studio-v3 pipeline)'],
-      ['Sanitize', 'drop broken / duplicate nets, normalize component IDs'],
-      ['BOM', 'bill of materials with part references'],
-      ['PCB layout', 'place & route onto a board outline'],
-    ],
-    action: '<button class="btn act" id="el-gen" style="margin-top:.5rem">Generate sample schematic</button><div class="scaffold-out" id="el-out"></div>',
-    status: 'Node → Python port pending', wire: wireElectronics,
-  },
   hardware: {
     eyebrow: 'Part · Hardware', title: 'Enclosure & sensor casing',
     intro: 'Parametric CAD to house the electronics and the sensors (ultrasound transducer, neural-dust array).',
@@ -283,18 +272,6 @@ function renderScaffold(el, key) {
     <div style="margin-top:.7rem"><span class="tag-soon">${c.status}</span></div>
   </div>`;
   if (c.wire) c.wire(el);
-}
-
-function wireElectronics(el) {
-  el.querySelector('#el-gen').addEventListener('click', () => {
-    const comps = [['U1', 'MCU', 'ESP32-S3'], ['U2', 'Bio-AFE', 'ADS1299 (8-ch)'], ['U3', 'Stimulator', 'constant-current'],
-      ['U4', 'US driver', 'MOSFET H-bridge'], ['J1', 'Electrodes', '8-ch header'], ['PM1', 'PMIC + batt', 'Li-Po 3.7V']];
-    const nets = ['J1→U2 (electrodes)', 'U2→U1 (SPI)', 'U1→U3 (stim ctrl)', 'U1→U4 (US ctrl)', 'PM1→all (power)'];
-    el.querySelector('#el-out').innerHTML = `<b class="small">Sample BCI front-end</b>
-      <table class="mini"><tbody>${comps.map((c) => `<tr><td><b>${c[0]}</b></td><td>${c[1]}</td><td class="muted">${c[2]}</td></tr>`).join('')}</tbody></table>
-      <div class="muted small" style="margin-top:.3rem">nets: ${nets.join(' · ')}</div>
-      <div class="muted small">demo shape from inventor-studio-v3's Circuit model — live LLM generation lands after the Python port.</div>`;
-  });
 }
 
 function boxSTL(name, X, Y, Z) {   // ASCII STL of an axis-aligned box (a stand-in enclosure)
@@ -357,6 +334,7 @@ function renderPanel(key) {
   else if (key === 'scanner') renderScanner(panel);
   else if (key === 'system') renderSystem(panel);
   else if (key === 'venv') renderVenv(panel);
+  else if (key === 'electronics') renderElectronics(panel);
   else if (key === 'fusion') renderFusion(panel);
   else if (SCAFFOLDS[key]) renderScaffold(panel, key);
   else renderVenv(panel);
