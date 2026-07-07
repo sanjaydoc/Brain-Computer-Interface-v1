@@ -169,7 +169,6 @@ function runBench(el, data, ch) {
   if (_bench) _bench.stop();
   const bench = el.querySelector('#mol-bench');
   bench.hidden = false;
-  el.querySelector('#bench-cx').textContent = `${data.name || 'connectome'} · ${data.n_neurons.toLocaleString()} neurons`;
   el.querySelector('#bench-ch').textContent = `${ch.id} (${chanType(ch)}, sens ${ch.sensitivity.toFixed(2)}, g ${ch.conductance.toFixed(2)})`;
   const verdict = el.querySelector('#bench-verdict');
   verdict.innerHTML = ' · <span class="muted">running…</span>';
@@ -183,6 +182,10 @@ function runBench(el, data, ch) {
     verdict.innerHTML = ` · <b class="chip ${cls}">${r.direction}</b> `
       + `<span class="muted small">${verb} · score ${r.score}</span>`;
   });
+  // header reflects the bench's actual working set (large brains are subsampled for speed)
+  const bn = _bench.data.n_neurons, orig = data.n_neurons;
+  el.querySelector('#bench-cx').textContent = `${data.name || 'connectome'} · `
+    + (bn < orig ? `${orig.toLocaleString()} → ${bn.toLocaleString()} sampled` : `${orig.toLocaleString()} neurons`);
   // canvas needs a laid-out size before the bench measures it
   requestAnimationFrame(() => { _bench.resize(); _bench.start(); });
 }
