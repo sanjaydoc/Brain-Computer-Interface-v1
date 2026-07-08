@@ -25,14 +25,15 @@ _Author: **Dr. Sanjay Anbu**_
 
 ---
 
-> **Roadmap.** This is **v1** (public) — the live interfacing platform.
-> The mapping science lives in [**Brain-Computer-Interface-v2**](https://github.com/sanjaydoc/Brain-Computer-Interface-v2) — a **private** repo.
+> **Roadmap.** This is **v1** — the only **public** repo (the live interfacing platform).
+> The mapping science and everything beyond it lives in **private** repos: **v2–v6**.
+> Starting with [**Brain-Computer-Interface-v2**](https://github.com/sanjaydoc/Brain-Computer-Interface-v2) _(private)_.
 >
-> - **v2** — work in progress
-> - **v3** — work in progress
-> - **v4** — work in progress
-> - **v5** — work in progress
-> - **v6** — work in progress
+> - **v2** _(private)_ — work in progress
+> - **v3** _(private)_ — work in progress
+> - **v4** _(private)_ — work in progress
+> - **v5** _(private)_ — work in progress
+> - **v6** _(private)_ — work in progress
 
 ---
 
